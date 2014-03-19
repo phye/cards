@@ -1,0 +1,2 @@
+Server-client Model
+Thread model, not event-driven, the platform is not designed to be highly efficient. I will integrate event-driven model in the future.
