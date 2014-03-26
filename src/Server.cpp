@@ -49,17 +49,25 @@ void thread_func(void* arg)
     }
 }
 
+enum PLAYSTATE{
+    SHUFFLE_CARDS,
+    DISPATCHING_CARDS,
+    WAITING_PRIME,
+    CHANGE_CARD,
+    PLAYING,
+    RECORD
+}
+
 int main(void)
 {
     int cur_round;
     int max_round;
     int cur_player=0;
     //Prompt users for number of players and number of cardsets
-    
+
     max_round = (54 * g_cardsets) / g_players;
 
-    g_fds = new int [g_players];
-    rcs = GenerateRandomCardVec();
+    g_fds = new int [g_players];   
 
     g_fds[0] = accept(...);
     g_fds[1] = accept(...);
@@ -67,30 +75,87 @@ int main(void)
     g_fds[3] = accept(...);
 
     //Allocate space for receiving and sending buffers of each thread
-    
-   pthread_create(..., thread_func, (void*) thread_arg_1); 
-   pthread_create(..., thread_func, (void*) thread_arg_2); 
-   pthread_create(..., thread_func, (void*) thread_arg_3); 
-   pthread_create(..., thread_func, (void*) thread_arg_4); 
 
-   while(1) {
-       if ( /* In dispatching state */ ){
-           while( cur_player != g_players ){
-               next_flag = false;
-               //Get one card from g_rcs
+    pthread_create(..., thread_func, (void*) thread_arg_1); 
+    pthread_create(..., thread_func, (void*) thread_arg_2); 
+    pthread_create(..., thread_func, (void*) thread_arg_3); 
+    pthread_create(..., thread_func, (void*) thread_arg_4); 
 
-               //Generate header and body for the card and save them to write_buf accordingly 
+    while(1) {
+        switch(state){
+            case SHUFFLE_CARDS:
+                {
+                    rcs = GenerateRandomCardVec();
+                    state = DISPATCHING_CARDS;					
+                    break;
+                }
 
-               //Make socket writable, the corresponding thread will finish rest of the job 
-               //And set next_flag
+            case DISPATCHING_CARDS:
+                {
+                    while( cur_player != g_players ){
+                        next_flag = false;
+                        //Get one card from g_rcs
 
-               while (! next_flag ) {}
-               cur_player ++;
-           }
-           cur_player = 0;
-       }
-       else { /* In playing game state */ 
+                        //Generate header and body for the card and save them to write_buf accordingly 
 
-       }
-   }
+                        //Make socket writable, the corresponding thread will finish rest of the job 
+                        //And set next_flag
+
+                        while (! next_flag ) {}
+                        cur_player ++;
+                    }
+                    cur_player = 0;
+                    if (/* 4*g_cardsets cards left */){
+                        if(hasPrime)        //Set by worker thread
+                        {
+                            state = CHANGE_CARD;
+                        }
+                        else
+                        {
+                            state = WAITING_PRIME;
+                        }
+                    }
+                    break;
+                    //TODO: need to set banker based on if it is the first round
+                }
+
+            case WAITING_PRIME:
+                {
+                    //wait for somebody to claim
+                    //if no body claims after a while, show all the left cards and choose a prime
+                    prime = 
+                        state = CHANGE_CARD;
+                    //Fall through
+                }
+
+            case CHANGE_CARD:
+                {
+                    //send all the left cards to banker
+                    //And wait for the banker to send cards back
+                    state = PLAYING;
+                    first_player = banker;
+                    //Fall through
+                }
+
+            case PLAYING:
+                { /* In playing game state */ 
+                    //Judge if the the card by player is valid
+
+                    if( /* Is last round */ )
+                        state = RECORD;
+                    else
+                        break;
+                }
+
+            case RECORD:
+                {
+                    //Do some record
+                    //Choose first player of next round
+
+                    state = SHUFFLE_CARDS;
+                    break;
+                }
+        }
+    }
+
 }
