@@ -130,6 +130,8 @@ int main(void)
 
             case CHANGE_CARD:
                 {
+					// wait some time for other player to claim different prime
+					
                     //send all the left cards to banker
                     //And wait for the banker to send cards back
                     state = PLAYING;
@@ -139,8 +141,27 @@ int main(void)
 
             case PLAYING:
                 { /* In playing game state */ 
-                    //Judge if the the card by player is valid
+                    
+                    cur_player = first_player;
+					do
+					{
+						//send request to cur_player to send cards
+						//Judge if the the card by player is valid
+						if(/* card valid */)
+						{
+							//record card for cur_player
+							cur_player ++;
+						}
+						else
+						{
+							//NACK
+							//TODO: we need to design special NACK for unsuccessful ShuaiPai, and should not continue for this case
+							continue;
+						}
+					}while(cur_player != first_player);
 
+					//compare cards and record score for this round
+					// decide the first_player of the next round
                     if( /* Is last round */ )
                         state = RECORD;
                     else
