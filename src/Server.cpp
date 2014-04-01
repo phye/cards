@@ -103,11 +103,11 @@ int main(void)
 
                     //Server should notify one player as the banker
                     /* 
-                                    * server -> client: Hey, you're the banker, and here's your new card
-                                    * client -> server: ACK
-                                    * client -> server: Here's the changed card
-                                    * server -> client: ACK
-                                    */ 
+                    * server -> client: Hey, you're the banker, and here's your new card
+                    * client -> server: ACK
+                    * client -> server: Here's the changed card
+                    * server -> client: ACK
+                    */ 
                     //send all the left cards to banker
                     //And wait for the banker to send cards back
                     state = PLAYING;
@@ -119,10 +119,10 @@ int main(void)
                 { 
                     /* In playing game state */ 
                     /* 
-                                    * server -> client: Hey, you're the one to send card
-                                    * client -> server: OK, here's my cards
-                                    * server -> client: ACK FIXME: Is this necessary? //X1n: This is necessary, I think all card exchange action should be acked.
-                                    */
+                    * server -> client: Hey, you're the one to send card
+                    * client -> server: OK, here's my cards
+                    * server -> client: ACK FIXME: Is this necessary? //X1n: This is necessary, I think all card exchange action should be acked.
+                    */
 
                     cur_player = first_player;
                     do
