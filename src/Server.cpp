@@ -93,7 +93,7 @@ int main(void)
                     //wait for somebody to claim
                     //if no body claims after a while, show all the left cards and choose a prime
                     prime = 
-                        state = CHANGE_CARD;
+                    state = CHANGE_CARD;
                     //Fall through
                 }
 
@@ -103,11 +103,11 @@ int main(void)
 
                     //Server should notify one player as the banker
                     /* 
-                     * server -> client: Hey, you're the banker
-                     * client -> server: OK, here's my card to be swapped
-                     * server -> client: OK, here's your new card
-                     * client -> server: ACK, thanks
-                     */ 
+                                    * server -> client: Hey, you're the banker, and here's your new card
+                                    * client -> server: ACK
+                                    * client -> server: Here's the changed card
+                                    * server -> client: ACK
+                                    */ 
                     //send all the left cards to banker
                     //And wait for the banker to send cards back
                     state = PLAYING;
@@ -116,12 +116,13 @@ int main(void)
                 }
 
             case PLAYING:
-                { /* In playing game state */ 
+                { 
+                    /* In playing game state */ 
                     /* 
-                     * server -> client: Hey, you're the one to send card
-                     * client -> server: OK, here's my cards
-                     * server -> client: ACK FIXME: Is this necessary?
-                     */
+                                    * server -> client: Hey, you're the one to send card
+                                    * client -> server: OK, here's my cards
+                                    * server -> client: ACK FIXME: Is this necessary? //X1n: This is necessary, I think all card exchange action should be acked.
+                                    */
 
                     cur_player = first_player;
                     do
