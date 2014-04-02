@@ -8,9 +8,11 @@
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                     Header Magic Number                       |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |Source |  Rev  |Frame Type |Data Length|      Frame Tag        |
+   |Source |  Rev  |  Frame  Type  |  Data Length  | Padding       |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                           Data                                |
+   | Padding       |  Padding      |  Frame Tag                    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                        ... Data ...                           |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |    CRC        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -19,9 +21,10 @@
     Header Magic Number (32b): 0xCAFEDADD
     Source Node			( 4b): Node number of the source
     Rev				    ( 4b): Software Revision, abcd.efgh
-    Frame Type			( 6b): Frame Type indicates the purpose of this frame, 64 types max
-    Data Length			( 6b): Length of the "Data" field, the unit is Byte
-    Frame Tag			(12b): Tag of this frame
+    Frame Type			( 8b): Frame Type indicates the purpose of this frame, 64 types max
+    Data Length			( 8b): Length of the "Data" field, the unit is Byte
+    Padding                     (24b): For extension, set to 0 if not used
+    Frame Tag			(16b): Tag of this frame
     Data		   (256b max): Payload of the frame, defined by each Frame Type
     CRC					( 8b): 8bit CRC checksum of the frame
 ***/

@@ -1,4 +1,5 @@
 #include <iostream>
+#include "Worker.h"
 
 class RandomCardVec g_rcs;
 int g_players;
@@ -7,13 +8,6 @@ int * g_fds;                //An array to store all fds for sockets to client
 
 bool g_next_flag;           //Stand for ready for next operation
 
-struct thread_arg{
-    int id;                 //Starting from 0
-    int num_players;
-    int timeout;            //In seconds
-    char* read_buf;
-    char* write_buf;
-};
 
 void* thread_func(void* arg);
 
