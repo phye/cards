@@ -8,9 +8,6 @@ int * g_fds;                //An array to store all fds for sockets to client
 
 bool g_next_flag;           //Stand for ready for next operation
 
-
-void* thread_func(void* arg);
-
 enum PLAYSTATE{
     SHUFFLE_CARDS,
     DISPATCHING_CARDS,

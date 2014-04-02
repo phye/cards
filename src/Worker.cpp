@@ -1,4 +1,3 @@
-static char **g_worker_flag;       //For communication between workers in bcast
 
 static void worker_flag_init()
 {
