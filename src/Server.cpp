@@ -22,25 +22,28 @@ int main(void)
 {
     int cur_round;
     int max_round;
-    int cur_player=0;
-    //Prompt users for number of players and number of cardsets
+    int cur_player = 0;
 
+    g_player = 4; //default 4 players
+    cout << "How many users?" << endl;
+    cin >> g_players;
+    
     max_round = (54 * g_cardsets) / g_players;
 
+    //TODO: create sockets.
+    
+    g_fds = new int [g_players]; 
 
-    g_fds = new int [g_players];   
-    g_fds[0] = accept(...);
-    g_fds[1] = accept(...);
-    g_fds[2] = accept(...);
-    g_fds[3] = accept(...);
-
-    //Allocate space for receiving and sending buffers of each thread
-
-    pthread_create(..., thread_func, (void*) thread_arg_1); 
-    pthread_create(..., thread_func, (void*) thread_arg_2); 
-    pthread_create(..., thread_func, (void*) thread_arg_3); 
-    pthread_create(..., thread_func, (void*) thread_arg_4); 
-
+    for(int idx = 0; idx < g_players; idx++)
+    {
+        g_fds[idx] = accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+        if(-1 != g_fds[idx])
+        {
+            //For now, we just kill the program itself on error, error handling will be developed later.
+            exit -1;
+        }
+    }
+    
     while(1) {
         switch(state){
             case SHUFFLE_CARDS:
