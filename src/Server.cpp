@@ -27,6 +27,10 @@ int main(void)
     g_player = 4; //default 4 players
     cout << "How many users?" << endl;
     cin >> g_players;
+
+    g_cardsets = 2; //default 2 card sets
+    cout << "How many set of cards?" << endl;
+    cin >> g_cardsets;
     
     max_round = (54 * g_cardsets) / g_players;
 

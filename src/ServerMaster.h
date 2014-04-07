@@ -4,11 +4,11 @@
 class ServerMaster{
     public: 
         //initialize all needed variables and environment for card in constructor, also need to create workers
-        ServerMaster(){}
-        ~ServerMaster(){}
+        ServerMaster(int nPlayers, int nCardSets);
+        ~ServerMaster();
 
         //maintain the card play process
-        CardPlaying(){}
+        void CardPlaying();
 
     private:
 }
