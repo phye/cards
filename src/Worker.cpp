@@ -1,13 +1,33 @@
+#include "Worker.h"
 
-static void worker_flag_init()
+Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw) 
+    : mi_worker_id(id), mi_num_players(np), mi_sock_fd(sfd),
+      mi_time_out(timeout), mp_main_worker(mw)
 {
-    thread_arg* pargs = (thread_arg*) arg;
-    int num_players = pargs->num_players;
-    g_worker_flag = new char* [num_players];
-    for(int i=0; i< num_players; i++){
-        g_worker_flag[i] = new char[num_players];
-        memset(g_worker_flag[i], 0, num_players);
-    }
+    mp_worker_flag = new char[mi_num_players];
+    memset(mp_worker_flag, 0, mi_num_players);
+    mp_worker_flag[mi_worker_id] = 1;
+
+    mp_rbuf = new char[BUF_LENGTH];
+    mp_wbuf = new char[BUF_LENGTH];
+    memset(mp_rbuf, 0, BUF_LENGTH);
+    memset(mp_wbuf, 0, BUF_LENGTH);
+
+    FD_ZERO(&m_rset);
+    FD_ZERO(&m_wset);
+    FD_ZERO(&m_eset);
+
+    FD_SET(mi_sock_fd, &m_rset);
+
+    pthread_create(&m_thread, NULL, thread_func, (void*) this);
+}
+
+Worker::~Worker()
+{
+    delete [] mp_worker_flag;
+    delete [] mp_rbuf;
+    delete [] mp_wbuf;
+    pthread_exit((void*) 0);
 }
 
 static int worker_bcast(void * arg, char* buf)
