@@ -1,4 +1,5 @@
 #include <iostream>
+#include "ServerMaster.h"
 #include "Worker.h"
 
 class RandomCardVec g_rcs;
@@ -8,7 +9,7 @@ int * g_fds;                //An array to store all fds for sockets to client
 
 bool g_next_flag;           //Stand for ready for next operation
 
-enum PLAYSTATE{
+typedef enum PLAY_STATE{
     SHUFFLE_CARDS,
     DISPATCHING_CARDS,
     WAITING_PRIME,
@@ -16,13 +17,14 @@ enum PLAYSTATE{
     PLAYING,
     RECORD,
     GAME_END
-};
+} PLAYSTATE;
 
 int main(void)
 {
     int cur_round;
     int max_round;
     int cur_player = 0;
+    PLAYSTATE state = SHUFFLE_CARDS;
 
     g_player = 4; //default 4 players
     cout << "How many users?" << endl;
@@ -47,31 +49,21 @@ int main(void)
             exit -1;
         }
     }
-    
+
+    ServerMaster master(g_players, g_cardsets, g_fds);
+        
     while(1) {
         switch(state){
             case SHUFFLE_CARDS:
                 {
-                    rcs = GenerateRandomCardVec();
+                    master.Shuffle();
                     state = DISPATCHING_CARDS;					
                     break;
                 }
 
             case DISPATCHING_CARDS:
                 {
-                    while( cur_player != g_players ){
-                        next_flag = false;
-                        //Get one card from g_rcs
-
-                        //Generate header and body for the card and save them to write_buf accordingly 
-
-                        //Make socket writable, the corresponding thread will finish rest of the job 
-                        //And set next_flag
-
-                        while (! next_flag ) {}
-                        cur_player ++;
-                    }
-                    cur_player = 0;
+                    master.DispatchCard()
                     if (/* 4*g_cardsets cards left */){
                         if(hasPrime)        //Set by worker thread
                         {
@@ -108,6 +100,7 @@ int main(void)
                     */ 
                     //send all the left cards to banker
                     //And wait for the banker to send cards back
+                    master.ExchangeCard();
                     state = PLAYING;
                     first_player = banker;
                     //Fall through
@@ -122,23 +115,7 @@ int main(void)
                     * server -> client: ACK FIXME: Is this necessary? //X1n: This is necessary, I think all card exchange action should be acked.
                     */
 
-                    cur_player = first_player;
-                    do
-                    {
-                        //send request to cur_player to send cards
-                        //Judge if the the card by player is valid
-                        if(/* card valid */)
-                        {
-                            //record card for cur_player
-                            cur_player ++;
-                        }
-                        else
-                        {
-                            //NACK
-                            //TODO: we need to design special NACK for unsuccessful ShuaiPai, and should not continue for this case
-                            continue;
-                        }
-                    }while(cur_player != first_player);
+                    master.PlayOneRound()
 
                     //compare cards and record score for this round
                     // decide the first_player of the next round
@@ -152,6 +129,7 @@ int main(void)
                 {
                     //Do some record
                     //Choose first player of next round
+                    master.RecordScore()
                     if(/*larger than highest level*/)
                     {
                         state = GAME_END;
@@ -167,6 +145,16 @@ int main(void)
                 {
                     //Show the game result
                     //exit program or start another game by user's choice
+                    bool playAgain;
+                    cout << "Wanner play again?" << endl;
+                    cin >> playAgain;
+
+                    if (playAgain)
+                    {
+                        master.Reset()
+                        state = SHUFFLE_CARDS;
+                    }
+                        
                     break;
                 }
         }
