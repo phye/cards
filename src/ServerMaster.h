@@ -7,10 +7,25 @@ class ServerMaster{
         ServerMaster(int nPlayers, int nCardSets);
         ~ServerMaster();
 
-        //maintain the card play process
-        void CardPlaying();
+        void GetScore(int* scoreContainer);
+        void Reset();//reset all data
+        void Shuffle(CardSet cardset);
+        void DispatchCard();
+        void ExchangeCard();
+        void PlayOneRound();
+        void RecordScore();
+        void SetBanker(int newBanker);
+        int GetBanker(void);
+        bool IsBanker(int player);
 
     private:
+//        CardSet allCard;
+        CardSet remainingCards;
+        CardSet* usedCards;//need to initialize for each player in constructor
+        CardSet bottomCards;
+        int* playerScore;
+        int banker;
+        
 }
 
 
