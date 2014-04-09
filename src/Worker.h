@@ -4,6 +4,7 @@
 #include <sys/select.h>
 #include <pthread.h>
 #include "MainWorker.h"
+#include "error.h"
 
 #define BUF_LENGTH 50
 struct thread_arg{
@@ -21,7 +22,9 @@ public:
     void Set_writable();
     void Clear_writable();
     void Set_worker_flag(int worker_id);
-    int SendBuf(char* buf, size_t sz);
+    void Clear_worker_flag();   //Clear all worker_flag except self
+    bool Send_buf(char* buf, size_t sz);
+    bool Send_buf(int id, char* buf, size_t sz);
 
 public: 
     int Get_worker_id() { return mi_worker_id; }
@@ -36,6 +39,10 @@ public: //Just enable setting time out, other members should be inited in ctor
 private:
     Worker(const Worker&);
     const Worker& operator= (const Worker&);
+
+private:
+    bool Is_worker_flag_all_set();
+    bool Bcast_to_workers(char* buf, size_t sz);
     
 private:
     int mi_worker_id;

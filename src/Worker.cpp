@@ -1,4 +1,6 @@
 #include "Worker.h"
+#include <string.h>
+#include <sys/select.h>
 
 Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw) 
     : mi_worker_id(id), mi_num_players(np), mi_sock_fd(sfd),
@@ -15,7 +17,6 @@ Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw)
 
     FD_ZERO(&m_rset);
     FD_ZERO(&m_wset);
-    FD_ZERO(&m_eset);
 
     FD_SET(mi_sock_fd, &m_rset);
 
@@ -28,6 +29,94 @@ Worker::~Worker()
     delete [] mp_rbuf;
     delete [] mp_wbuf;
     pthread_exit((void*) 0);
+}
+
+void Worker::Set_writable()
+{
+    int sec = 0;
+    //If fd is already set in wr set, we're already writing, wait until timeout
+    while( FD_ISSET(mi_sock_fd, &m_wset) ) 
+    {
+        if (sec == mi_time_out)
+            exit(SET_WRITABLE_TIMEOUT);
+        sleep(1);
+        sec ++;
+    }
+    FD_SET(mi_sock_fd, &m_wset);
+}
+
+void Worker::Clear_writable()
+{
+    FD_CLR(mi_sock_fd, &m_wset);
+}
+
+void Worker::Set_worker_flag(int worker_id)
+{
+    Worker* worker = mp_main_worker->Get_worker(worker_id);
+    //FIXME, public/private is class concept
+    worker->mp_worker_flag[mi_worker_id] = 1;
+}
+
+void Worker::Clear_worker_flag()
+{
+    memset(mp_worker_flag, 0, mi_num_players);
+    mp_worker_flag[mi_worker_id] = 1;
+}
+
+bool Worker::Send_buf(char* buf, int sz)
+{
+    int sec = 0;
+    while( FD_ISSET(mi_sock_fd, &m_wset) ) 
+    {
+        if (sec == mi_time_out)
+            exit(SEND_BUF_TIMEOUT);
+        sleep(1);
+        sec ++;
+    }
+
+    memset(mp_wbuf, 0, BUF_LENGTH);
+    memcpy(mp_wbuf, buf, sz);
+    Set_writable();
+    return true;
+}
+
+bool Worker::Send_buf(int id, char* buf, int sz)
+{
+    if ( id == mi_worker_id )
+        return SendBuf(buf, sz);
+    else {
+        Worker* worker = mp_main_worker->Get_worker(id);
+        return worker->SendBuf(buf,sz);
+    }
+}
+
+bool Worker::Is_worker_flag_all_set()
+{
+    bool ret = true;
+    for (int i=0; i != mi_num_players; i++)
+        ret &= (bool) mp_worker_flag[i]; 
+    return ret;
+}
+
+bool Worker::Bcast_to_workers(char* buf, int sz)
+{
+    int sec = 0;
+    Clear_worker_flag();
+    for (int i = 0; i < mi_num_players; i++)
+    {
+        if (i == mi_worker_id)
+            continue;
+        Send_buf(i, buf, sz);
+    }
+    
+    while ( !Is_worker_flag_all_set() ) {
+        if (sec == mi_time_out)
+            exit(BCAST_BUF_TIMEOUT);
+        sleep(1);
+        sec ++;
+    }
+
+    return true;
 }
 
 static int worker_bcast(void * arg, char* buf)
