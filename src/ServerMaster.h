@@ -11,6 +11,7 @@ typedef enum PLAYER_NAME
     PLAYER_NONE = 0xFF
 }PLAYERNAME;
 
+#define LEVEL_GAP_DEFAULT 20
 
 class ServerMaster{
     public: 
@@ -18,28 +19,38 @@ class ServerMaster{
         ServerMaster(int nPlayers, int nCardSets);
         ~ServerMaster();
 
-        void GetScore(int* scoreContainer);
+        // Card playing
         void Reset();//reset all data
         void Shuffle(CardSet cardset);
         void DispatchCard();
         void ExchangeCard();
         void PlayOneRound();
         void RecordScore();
+
+        // Getting info
+        void GetScore(int* scoreContainer);
+        int  GetCurrentRound();
+        int  GetPlayingLevel(PLAYERNAME player);
+        Card GetCurrentPrime();
+        int  GetCurrentRound();
+        int  GetBanker(void);
+
+        // Setting info
         void SetBanker(int newBanker);
-        int GetBanker(void);
+        void SetLevelGap(int gap);
+        
         bool IsBanker(int player);
 
     private:
-//        CardSet allCard;
         CardSet remainingCards;
         CardSet* usedCards;//need to initialize for each player in constructor
         CardSet bottomCards;
 
         int playerCount;
         int cardSetCount;
-        int levelUpGrade;//20 points or 40 points?
+        int levelGap;//20 points or 40 points?
 
-        int* playerScore;
+        int playerScore[2];
         int currentRound;
         
         PLAYERNAME banker;
