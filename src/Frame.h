@@ -29,8 +29,38 @@
     CRC					( 8b): 8bit CRC checksum of the frame
 ***/
 
+typedef struct _FrameHead_t {
+    int frm_magic_num; 
+    int frm_src     :4;
+    int frm_ver     :4;
+    unsigned char frm_type;
+    unsigned char frm_len;
+    unsigned char frm_pad1;     //One byte padding
+    unsigned short frm_pad2;    //Two bytes padding
+    unsigned short frm_tag;
+} FrameHead_t;
 
-
-
+typedef enum _FrameType_t {
+    SND_CARD = 0,
+    SND_CARD_ACK, 
+    CLAIM_PRIME,        //Sent from client
+    CLAIM_PRIME_ACK,
+    CLAIM_PRIME_NACK,   //Invalid prime request
+    CLAIM_PRIME_BCAST,
+    CLAIM_PRIME_BCAST_ACK,
+    BANKER_NOTIF,
+    BANKER_NOTIF_ACK,
+    SWAP_CARD_NOTIF,    //Sent from server
+    SWAP_CARD_NOTIF_ACK,
+    SWAP_CARD_DATA,     //Sent from client
+    SWAP_CARD_DATA_ACK,
+    DISPATCH_NOTIF,
+    DISPATCH_NOTIF_ACK,
+    DISPATCH_CARD,      //Sent from client
+    DISPATCH_CARD_ACK,
+    DISPATCH_CARD_NACK,
+    DISPATCH_CARD_BCAST,
+    DISPATCH_CARD_BCAST_ACK
+}FrameType_t;
 
 #endif

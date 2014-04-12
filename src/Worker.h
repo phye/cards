@@ -20,7 +20,9 @@ public:
 
 public:
     void Set_writable();
-    void Clear_writable();
+    void Clear_writable() { FD_CLR(mi_sock_fd, &m_wset); }
+    void Set_readable() { FD_SET(mi_sock_fd, &m_rset); }
+    void Clear_readable() { FD_CLR(mi_sock_fd, &m_rset); }
     void Set_worker_flag(int worker_id);
     void Clear_worker_flag();   //Clear all worker_flag except self
     bool Send_buf(char* buf, size_t sz);
@@ -33,14 +35,14 @@ public:
     int Get_time_out() { return mi_time_out; }
     MainWorker* Get_main_worker() { return mp_main_worker; }
 
+    friend void* worker_func(void* arg);
+
 public: //Just enable setting time out, other members should be inited in ctor
     void Set_time_out(int timeout) { mi_time_out = timeout; }
 
 private:
     Worker(const Worker&);
     const Worker& operator= (const Worker&);
-
-private:
     bool Is_worker_flag_all_set();
     bool Bcast_to_workers(char* buf, size_t sz);
     

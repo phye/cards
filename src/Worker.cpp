@@ -1,4 +1,6 @@
 #include "Worker.h"
+#include "Frame.h"
+#include <stddef.h>
 #include <string.h>
 #include <sys/select.h>
 
@@ -20,7 +22,7 @@ Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw)
 
     FD_SET(mi_sock_fd, &m_rset);
 
-    pthread_create(&m_thread, NULL, thread_func, (void*) this);
+    pthread_create(&m_thread, NULL, worker_func, (void*) this);
 }
 
 Worker::~Worker()
@@ -45,11 +47,6 @@ void Worker::Set_writable()
     FD_SET(mi_sock_fd, &m_wset);
 }
 
-void Worker::Clear_writable()
-{
-    FD_CLR(mi_sock_fd, &m_wset);
-}
-
 void Worker::Set_worker_flag(int worker_id)
 {
     Worker* worker = mp_main_worker->Get_worker(worker_id);
@@ -63,6 +60,9 @@ void Worker::Clear_worker_flag()
     mp_worker_flag[mi_worker_id] = 1;
 }
 
+// Send_buf doesn't guarantee that buffer are sent and ACK are read 
+// Worker need to set some flag to tell MainWorker that ACK are read
+// Caller are responsible for free buf
 bool Worker::Send_buf(char* buf, int sz)
 {
     int sec = 0;
@@ -102,7 +102,7 @@ bool Worker::Bcast_to_workers(char* buf, int sz)
 {
     int sec = 0;
     Clear_worker_flag();
-    for (int i = 0; i < mi_num_players; i++)
+    for (int i = 0; i != mi_num_players; i++)
     {
         if (i == mi_worker_id)
             continue;
@@ -119,6 +119,7 @@ bool Worker::Bcast_to_workers(char* buf, int sz)
     return true;
 }
 
+#if 0
 static int worker_bcast(void * arg, char* buf)
 {
     thread_arg* pargs = (thread_arg*) arg;
@@ -142,7 +143,39 @@ static int worker_bcast(void * arg, char* buf)
     //all other players have been brocasted successfully, return with success
     return 0;
 }
+#endif 
 
+void* worker_func(void* arg)
+{
+    Worker* pw= (Worker*) arg;
+    int id = pw->Get_worker_id();
+    int fd = pw->Get_sock_fd();
+    struct timeval sel_tmout;
+    sel_tmout.tv_sec = 0;
+    sel_tmout.tv_nsec = 1000;   //select after every ms
+
+    while(1) {
+        int ret = select(fd+1, p_rset, p_wset, NULL, &sel_tmout);
+        //FIXME: now rely on system to restart select when interrupted in select
+        if (FD_ISSET(fd, p_wset)) {
+            int wsz = sizeof(FrameHead_t) + 
+                pw->mp_wbuf[offsetof(FrameHead_t, frm_len)];
+            //sock_write is reliable 
+            int nw = sock_write(fd, pw->mp_wbuf, wsz);
+            memset(pw->mp_wbuf, 0, BUF_LENGTH);
+            pw->Clear_writable();
+        }
+        if (FD_ISSET(fd, p_rset)) {
+            //Read everything to pw->mp_rbuf;
+            //Parse 
+
+        }
+
+        //select will clear readset if not readable, have to set the 
+        //interest field again
+        pw->Set_readable();
+    }
+}
 void* thread_func(void* arg)
 {
     thread_arg* pargs = (thread_arg*) arg;
