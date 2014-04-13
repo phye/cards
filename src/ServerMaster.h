@@ -9,7 +9,18 @@ typedef enum PLAYER_NAME
     PLAYER_4,
     MAX_PLAYER_COUNT,
     PLAYER_NONE = 0xFF
-}PLAYERNAME;
+} PLAYERNAME;
+
+typedef enum PLAY_STATE{
+    SHUFFLE_CARDS,
+    DISPATCHING_CARDS,
+    WAITING_PRIME,
+    CHANGE_CARD,
+    PLAYING,
+    RECORD_SCORE,
+    ROUND_END,
+    GAME_END
+} PLAYSTATE;
 
 #define LEVEL_GAP_DEFAULT 20
 
@@ -19,13 +30,21 @@ class ServerMaster{
         ServerMaster(int nPlayers, int nCardSets);
         ~ServerMaster();
 
+        // Init environment and ready for play
+        bool Init();
+        bool WaitPlayerReady();
+        
         // Card playing
         void Reset();//reset all data
+        void Run();
         void Shuffle(CardSet cardset);
         void DispatchCard();
+        void WaitForPrime();
         void ExchangeCard();
-        void PlayOneRound();
+        void PlayOneLoop();
         void RecordScore();
+        void RoundEnd();
+        void GameEnd();
 
         // Getting info
         void GetScore(int* scoreContainer);
@@ -34,12 +53,17 @@ class ServerMaster{
         Card GetCurrentPrime();
         int  GetCurrentRound();
         int  GetBanker(void);
+        PLAYSTATE GetCurrentState();
 
         // Setting info
+        bool ClaimPrime(Card claimingCard);
         void SetBanker(int newBanker);
         void SetLevelGap(int gap);
         
         bool IsBanker(int player);
+
+    private:
+        bool IsLastLoop();
 
     private:
         CardSet remainingCards;
@@ -50,6 +74,7 @@ class ServerMaster{
         int cardSetCount;
         int levelGap;//20 points or 40 points?
 
+        PLAYSTATE currentState;
         int playerScore[2];
         int currentRound;
         
