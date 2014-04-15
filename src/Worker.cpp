@@ -1,5 +1,6 @@
 #include "Worker.h"
 #include "Frame.h"
+#include "Card.h"
 #include <stddef.h>
 #include <string.h>
 #include <sys/select.h>
@@ -119,35 +120,10 @@ bool Worker::Bcast_to_workers(char* buf, int sz)
     return true;
 }
 
-#if 0
-static int worker_bcast(void * arg, char* buf)
-{
-    thread_arg* pargs = (thread_arg*) arg;
-    int id = pargs->id;
-    int num_players = pargs->num_players;
-    char* wr_flags = g_worker_flag[id];
-    memset(wr_flags, 0, pargs->num_players);
-    g_worker_flag[id][id] = 1;
-
-    //Copy everything on buf to other workers' write buffer
-    //and make all other socket writable
-    
-    //TODO: We'd better put bcasting worker's id in the package header
-    while ( /* g_worker_flag[] are not all 1 */ ) {
-        if ( /* time out */ )
-        {
-            // return with error code
-        }
-    }
-
-    //all other players have been brocasted successfully, return with success
-    return 0;
-}
-#endif 
-
 void* worker_func(void* arg)
 {
     Worker* pw= (Worker*) arg;
+    MainWorker* pm = pw->Get_main_worker();
     int id = pw->Get_worker_id();
     int fd = pw->Get_sock_fd();
     struct timeval sel_tmout;
@@ -156,7 +132,7 @@ void* worker_func(void* arg)
 
     while(1) {
         int ret = select(fd+1, p_rset, p_wset, NULL, &sel_tmout);
-        //FIXME: now rely on system to restart select when interrupted in select
+        //FIXME: Rely on system to restart select when interrupted in select
         if (FD_ISSET(fd, p_wset)) {
             int wsz = sizeof(FrameHead_t) + 
                 pw->mp_wbuf[offsetof(FrameHead_t, frm_len)];
@@ -168,7 +144,107 @@ void* worker_func(void* arg)
         if (FD_ISSET(fd, p_rset)) {
             //Read everything to pw->mp_rbuf;
             //Parse 
+            FrameType_t ft = pw->mp_rbuf[offsetof(FrameHead_t, frm_type)];
+            unsigned char data_len = pw->mp_rbuf[offsetof(FrameHead_t, frm_len)];
+            char* payload = pw->mp_rbuf[sizeof(FrameHead_t)];
+            switch(ft) {
+                case DISPATCH_CARD_ACK:
+                    {
+                        //FIXME: update status name with X1n
+                        if( pm->Get_current_state()
+                                == DISPATCHING_CARD )
+                            pm->Set_next_ready();
+                        break;
+                    }
+                case CLAIM_PRIME:
+                    {
+                        if (data_len > 2) 
+                            break;
+                        else if (data_len == 2) {
+                            if ( payload[0] != payload[1] )
+                                break;
+                        }
+                        //TODO, add ctor of Card
+                        Card prime(payload[0]); 
+                        int ret = pm->Set_prime_card(prime, data_len);
+                        if (ret == 0){
+                            //Generate CLAIM_PRIME_ACK package and send to client
+                            //Generate Bcast package and call Bcast
+                        } else {
+                            //Generate CLAIM_PRIME_NACK package and send to client
+                        }
+                        break;
+                    }
+                case CLAIM_PRIME_BCAST_ACK:
+                    {
+                        int snd_id = pw->rbuf[offsetof(FrameHead_t, frm_src)];
+                        pm->Get_worker(snd_id)->Set_worker_flag(id);
+                        break;
+                    }
+                case SWAP_CARD_NOTIF_ACK:
+                    {
+                        //Currently do nothing
+                        //In the future, it may trigger sending starting count down 
+                        //counter in other players
+                        break;
+                    }
+                case SWAP_CARD_DATA:
+                    {
+                        if (data_len == BASE_CARD_NUM) {
+                            CardSet base_cards(payload, data_len);
+                            pm->Set_base_cards(base_cards);
+                            //Generate SWAP_CARD_DATA_ACK package and send to client
+                            pm->Set_next_ready();
+                        }
+                        else {
+                            //TODO, add some error handling
+                        }
+                        break;
+                    }
+                case SND_NOTIF_ACK:
+                    {
+                        //Currently do nothing
+                        //In the future, it may trigger sending starting count down 
+                        //counter in other players
+                        break;
+                    }
+                case SND_CARD:
+                    {
+                        CardSet snd_cards(payload, data_len);
+                        CardSet* pcs = NULL;
+                        if (pm->Is_valid_snd(id, snd_cards)){
+                            pcs = &snd_cards;
+                            pm->Update_card_set(id, *pcs);
+                            //Generate SND_CARD_ACK and send to client
+                        } else {
+                            pcs = pm->Get_smallest_from_snd_cards(id, snd_cards);
+                            pm->Update_card_set(id, *pcs);
+                            //Generate SND_CARD_NACK and send to client
+                            //SND_CARD_NACK should contain NACK + *pcs
+                        }
 
+                        pm->Update_card_set(id, *pcs);
+                        
+                        //Generate SND_CARD_BCAST package and call Bcast
+                        //SND_CARD_BCAST should contain *pcs
+                        if (pcs != &snd_cards)
+                            delete pcs;
+
+                        pm->Set_next_ready();
+                        break;
+                    }
+                case ROUND_RESULT_NOTIF_ACK:
+                    {
+                        pm->Set_record_bcast_flag(id);
+                        if (/* All workers are bcasted*/)
+                            pm->Set_next_ready();
+                        break;
+                    }
+                default:
+                    {
+                        //Invalid card received, log sth
+                    }
+            }
         }
 
         //select will clear readset if not readable, have to set the 
@@ -176,85 +252,4 @@ void* worker_func(void* arg)
         pw->Set_readable();
     }
 }
-void* thread_func(void* arg)
-{
-    thread_arg* pargs = (thread_arg*) arg;
-    int id = pargs->id;
-    int fd = g_fds[pargs->id];
-    char* wr_buf = pargs->write_buf;
 
-    while(1) {
-        // Epoll/Select on fd
-        {
-            if (/*fd writable */) {
-                //Write everything in pargs->writ_buf to fd
-                
-                //TODO: need to do some error handling
-                
-                //We're driven by other workers, need to tell others
-                //TODO: need to change based on package header format
-                if ( wr_buf[0] != id ){     
-                    g_worker_flag[wr_buf[0]] = 1;
-                }
-
-                //Empty pargs->write_buf
-                //Make fd unwritable
-            }
-            if ( /*fd readable */) {
-                //Read everything to pargs->read_buf
-                //Parsing pargs->read_buf 
-
-                //Main is in DISPATCHING_CARDS
-                if ( /* Is ACK from client */ ) {
-                    next_flag = true;
-                } else if ( /* Is CLAIMING Primes */ ) {
-                    int rc = 0;
-                    if ( /* Is valid Prime CLAIMING */ ){
-                        //Store prime card in Server
-                        
-                        //Generate ACK package, copy to wr_buf
-                        //then make own socket writable
-
-                        //Generate brocatest package, then save it to buf
-                        //Broadcast everything on buf to other workers
-                        rc = worker_bcast(args, buf);
-                        if (rc < 0)
-                            exit(/*some error code*/);
-                    } else { /* Invalid CLAIMING */ 
-                        //Generate NACK package, copy to wr_buf
-                        //then make own socket writable
-                    }
-                    continue;
-                } else if ( /* CARD Rcvd from client for swapping*/ ) {
-                    //Save cards received from client in server
-                    //Update cardsets for banker
-
-                    //Generate package based on cards to be swapped to the banker
-                    //Copy to wr_buf, then make own socket writable
-
-                    //We're not done yet, should wait for ACK for card swapping
-                    continue;
-                } else if ( /* CARD swapping ACK */ ) {
-                    next_flag = true;
-                } else if ( /* Card rcvd from client */ ) { //PLAYING
-                    if ( /* Is valid card/cardSet */ ) {
-                        int rc = 0;
-                        //Update server's card set for corresponding client
-                        //FIXME: is ACK from server necesasry ?
-                        //Generate ACK, copy to wr_buf, and set socket writable
-
-                        //Generate package to be brocasted to other workers
-                        //and save them to buf
-                        rc = worker_bcast(args, buf);
-                        if (rc < 0)
-                            exit(/*some error code*/);
-                        //Brodcasting finished, main can continue
-                        next_flag = true;
-                    } else { //TODO: dealing with invalid cards
-
-                    }
-                }
-            }
-        }
-    }
-}

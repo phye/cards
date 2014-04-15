@@ -41,8 +41,8 @@ typedef struct _FrameHead_t {
 } FrameHead_t;
 
 typedef enum _FrameType_t {
-    SND_CARD = 0,
-    SND_CARD_ACK, 
+    DISPATCH_CARD = 0,
+    DISPATCH_CARD_ACK, 
     CLAIM_PRIME,        //Sent from client
     CLAIM_PRIME_ACK,
     CLAIM_PRIME_NACK,   //Invalid prime request
@@ -54,13 +54,17 @@ typedef enum _FrameType_t {
     SWAP_CARD_NOTIF_ACK,
     SWAP_CARD_DATA,     //Sent from client
     SWAP_CARD_DATA_ACK,
-    DISPATCH_NOTIF,
-    DISPATCH_NOTIF_ACK,
-    DISPATCH_CARD,      //Sent from client
-    DISPATCH_CARD_ACK,
-    DISPATCH_CARD_NACK,
-    DISPATCH_CARD_BCAST,
-    DISPATCH_CARD_BCAST_ACK
+    SND_NOTIF,
+    SND_NOTIF_ACK,
+    SND_CARD,      //Sent from client
+    SND_CARD_ACK,
+    SND_CARD_NACK,
+    SND_CARD_BCAST,
+    SND_CARD_BCAST_ACK,
+    SNDROUND_RESULT_NOTIF,
+    ROUND_RESULT_NOTIF_ACK,
+    GAME_RESULT_NOTIF,
+    GAME_RESULT_NOTIF_ACK
 }FrameType_t;
 
 #endif

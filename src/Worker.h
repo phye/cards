@@ -7,6 +7,8 @@
 #include "error.h"
 
 #define BUF_LENGTH 50
+#define BASE_CARD_NUM 8
+
 struct thread_arg{
     Worker* p_worker;
 };
@@ -25,6 +27,7 @@ public:
     void Clear_readable() { FD_CLR(mi_sock_fd, &m_rset); }
     void Set_worker_flag(int worker_id);
     void Clear_worker_flag();   //Clear all worker_flag except self
+
     bool Send_buf(char* buf, size_t sz);
     bool Send_buf(int id, char* buf, size_t sz);
 
@@ -44,6 +47,7 @@ private:
     Worker(const Worker&);
     const Worker& operator= (const Worker&);
     bool Is_worker_flag_all_set();
+    bool Is_valid_prime_claim();
     bool Bcast_to_workers(char* buf, size_t sz);
     
 private:
