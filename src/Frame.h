@@ -1,5 +1,7 @@
 #ifndef _FRAME_H_
 #define _FRAME_H_
+#include <stdint.h>
+
 /*****
     Frame definition
 
@@ -30,41 +32,43 @@
 ***/
 
 typedef struct _FrameHead_t {
-    int frm_magic_num; 
-    int frm_src     :4;
-    int frm_ver     :4;
-    unsigned char frm_type;
-    unsigned char frm_len;
-    unsigned char frm_pad1;     //One byte padding
-    unsigned short frm_pad2;    //Two bytes padding
-    unsigned short frm_tag;
+    uint32_t frm_magic_num; 
+    uint8_t frm_src     :4;
+    uint8_t frm_ver     :4;
+    uint8_t frm_type;
+    uint8_t frm_len;
+    uint8_t frm_pad1;     //One byte padding
+    uint16_t frm_pad2;    //Two bytes padding
+    uint16_t frm_tag;
 } FrameHead_t;
 
 typedef enum _FrameType_t {
     DISPATCH_CARD = 0,
-    DISPATCH_CARD_ACK, 
     CLAIM_PRIME,        //Sent from client
+    DISPATCH_CARD_ACK, 
+    CLAIM_PRIME_BCAST,
+    BANKER_NOTIF,
+    SWAP_CARD_NOTIF,    //Sent from server
+    SWAP_CARD_DATA,     //Sent from client
+    SND_CARD_NOTIF,
+    SND_CARD,      //Sent from client
+    SND_CARD_BCAST,
+    ROUND_RESULT_NOTIF,
+    SET_RESULT_NOTIF,
+    ACK_START,
     CLAIM_PRIME_ACK,
     CLAIM_PRIME_NACK,   //Invalid prime request
-    CLAIM_PRIME_BCAST,
     CLAIM_PRIME_BCAST_ACK,
-    BANKER_NOTIF,
     BANKER_NOTIF_ACK,
-    SWAP_CARD_NOTIF,    //Sent from server
     SWAP_CARD_NOTIF_ACK,
-    SWAP_CARD_DATA,     //Sent from client
     SWAP_CARD_DATA_ACK,
-    SND_NOTIF,
-    SND_NOTIF_ACK,
-    SND_CARD,      //Sent from client
+    SND_CARD_NOTIF_ACK,
     SND_CARD_ACK,
     SND_CARD_NACK,
-    SND_CARD_BCAST,
     SND_CARD_BCAST_ACK,
-    SNDROUND_RESULT_NOTIF,
     ROUND_RESULT_NOTIF_ACK,
-    GAME_RESULT_NOTIF,
-    GAME_RESULT_NOTIF_ACK
+    SET_RESULT_NOTIF_ACK,
+    FRAME_TYPE_MAX
 }FrameType_t;
 
 #endif

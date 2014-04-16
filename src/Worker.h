@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include "MainWorker.h"
 #include "error.h"
+#include "Card.h"
 
 #define BUF_LENGTH 50
 #define BASE_CARD_NUM 8
@@ -26,7 +27,8 @@ public:
     void Set_readable() { FD_SET(mi_sock_fd, &m_rset); }
     void Clear_readable() { FD_CLR(mi_sock_fd, &m_rset); }
     void Set_worker_flag(int worker_id);
-    void Clear_worker_flag();   //Clear all worker_flag except self
+    //Clear all worker_flag except self
+    void Clear_worker_flag();   
 
     bool Send_buf(char* buf, size_t sz);
     bool Send_buf(int id, char* buf, size_t sz);
@@ -40,17 +42,30 @@ public:
 
     friend void* worker_func(void* arg);
 
-public: //Just enable setting time out, other members should be inited in ctor
+public: 
     void Set_time_out(int timeout) { mi_time_out = timeout; }
+
+public:
+    //APIs For MainWorker 
+    int Dispatch_card(const Card&);
+    int Banker_notify();
+    int Swap_card_notify();
+    int Send_card_notify();
+    int Round_result_notify();
+    int Set_result_notify();
+
+public:
+    int Generate_frame(FrameType_t ft, short ack_tag, void* buf, size_t buf_len);
+
 
 private:
     Worker(const Worker&);
     const Worker& operator= (const Worker&);
     bool Is_worker_flag_all_set();
-    bool Is_valid_prime_claim();
-    bool Bcast_to_workers(char* buf, size_t sz);
+    bool Bcast_to_others(char* buf, size_t sz);
     
 private:
+    short ms_frame_num;
     int mi_worker_id;
     int mi_num_players;
     int mi_sock_fd;

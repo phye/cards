@@ -4,11 +4,14 @@
 #include <stddef.h>
 #include <string.h>
 #include <sys/select.h>
+#include <arpa/inet.h>
+
 
 Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw) 
     : mi_worker_id(id), mi_num_players(np), mi_sock_fd(sfd),
       mi_time_out(timeout), mp_main_worker(mw)
 {
+    ms_frame_num = 0;
     mp_worker_flag = new char[mi_num_players];
     memset(mp_worker_flag, 0, mi_num_players);
     mp_worker_flag[mi_worker_id] = 1;
@@ -84,10 +87,10 @@ bool Worker::Send_buf(char* buf, int sz)
 bool Worker::Send_buf(int id, char* buf, int sz)
 {
     if ( id == mi_worker_id )
-        return SendBuf(buf, sz);
+        return Send_buf(buf, sz);
     else {
         Worker* worker = mp_main_worker->Get_worker(id);
-        return worker->SendBuf(buf,sz);
+        return worker->Send_buf(buf,sz);
     }
 }
 
@@ -99,7 +102,7 @@ bool Worker::Is_worker_flag_all_set()
     return ret;
 }
 
-bool Worker::Bcast_to_workers(char* buf, int sz)
+bool Worker::Bcast_to_others(char* buf, int sz)
 {
     int sec = 0;
     Clear_worker_flag();
@@ -119,6 +122,8 @@ bool Worker::Bcast_to_workers(char* buf, int sz)
 
     return true;
 }
+
+
 
 void* worker_func(void* arg)
 {
@@ -253,3 +258,76 @@ void* worker_func(void* arg)
     }
 }
 
+/*@Params: 
+ * ft, Header method type
+ * buf, the buffer to be filled, should be newed and deleted by caller
+ * buf_len, length of buf
+ */
+    
+int Worker::Generate_frame(FrameHead_t ft, short ack_tag, void* buf, size_t buf_len)
+{
+    if (ft < 0 || ft > FRAME_TYPE_MAX)
+        return -1;
+
+    FrameHead_t* head = (FrameHead_t*) buf;
+    head->frm_magic_num = htonl(0xCAFEDADD);
+    head->frm_src = mi_worker_id;
+    head->frm_ver = 1;
+    head->frm_type = (char) ft;
+    head->frm_len = buf_len - sizeof(FrameHead_t);
+    head->frm_pad1 = 0;
+    head->frm_pad2 = htons(0);
+    if (ft < ACK_START) 
+        head->frm_tag = htons(ms_frame_num++) ;
+    else
+        head->frm_tag = htons(ack_tag);
+
+    return 0;
+}
+
+int Worker::Dispatch_card(const Card& card)
+{
+    FrameType_t ft = DISPATCH_CARD;
+    size_t buf_len = sizeof(FrameHead_t) + 1;
+    void* buf = new char [buf_len];
+
+    //TODO: Card.Get_char();
+    buf[sizeof(FrameHead_t)] = card.Get_char();
+    Generate_frame(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+}
+
+int Worker::Banker_notify()
+{
+    FrameType_t ft = BANKER_NOTIF;
+    size_t buf_len = sizeof(FrameHead_t);
+    void* buf = new char [buf_len];
+
+    Generate_frame(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+}
+
+//FIXME: This function may not be necessary
+int Worker::Swap_card_notify()
+{
+    FrameType_t ft = SWAP_CARD_NOTIF;
+    size_t buf_len = sizeof(FrameHead_t);
+    void* buf = new char [buf_len];
+
+    Generate_frame(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+}
+
+int Worker::Send_card_notify()
+{
+    FrameType_t ft = SND_CARD_NOTIF;
+    size_t buf_len = sizeof(FrameHead_t);
+    void* buf = new char [buf_len];
+
+    Generate_frame(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+}
