@@ -16,8 +16,8 @@ Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw)
     memset(mp_worker_flag, 0, mi_num_players);
     mp_worker_flag[mi_worker_id] = 1;
 
-    mp_rbuf = new char[BUF_LENGTH];
-    mp_wbuf = new char[BUF_LENGTH];
+    mp_rbuf = new uint8_t [BUF_LENGTH];
+    mp_wbuf = new uint8_t [BUF_LENGTH];
     memset(mp_rbuf, 0, BUF_LENGTH);
     memset(mp_wbuf, 0, BUF_LENGTH);
 
@@ -48,6 +48,7 @@ void Worker::Set_writable()
         sleep(1);
         sec ++;
     }
+    //FIXME: should I add mutex here?
     FD_SET(mi_sock_fd, &m_wset);
 }
 
@@ -67,7 +68,7 @@ void Worker::Clear_worker_flag()
 // Send_buf doesn't guarantee that buffer are sent and ACK are read 
 // Worker need to set some flag to tell MainWorker that ACK are read
 // Caller are responsible for free buf
-bool Worker::Send_buf(char* buf, int sz)
+bool Worker::Send_buf(void* buf, int sz)
 {
     int sec = 0;
     while( FD_ISSET(mi_sock_fd, &m_wset) ) 
@@ -84,7 +85,7 @@ bool Worker::Send_buf(char* buf, int sz)
     return true;
 }
 
-bool Worker::Send_buf(int id, char* buf, int sz)
+bool Worker::Send_buf(int id, void* buf, int sz)
 {
     if ( id == mi_worker_id )
         return Send_buf(buf, sz);
@@ -102,7 +103,7 @@ bool Worker::Is_worker_flag_all_set()
     return ret;
 }
 
-bool Worker::Bcast_to_others(char* buf, int sz)
+bool Worker::Bcast_to_others(void* buf, int sz)
 {
     int sec = 0;
     Clear_worker_flag();
@@ -123,8 +124,6 @@ bool Worker::Bcast_to_others(char* buf, int sz)
     return true;
 }
 
-
-
 void* worker_func(void* arg)
 {
     Worker* pw= (Worker*) arg;
@@ -133,7 +132,7 @@ void* worker_func(void* arg)
     int fd = pw->Get_sock_fd();
     struct timeval sel_tmout;
     sel_tmout.tv_sec = 0;
-    sel_tmout.tv_nsec = 1000;   //select after every ms
+    sel_tmout.tv_nsec = 20000;   //select after every 20 ms
 
     while(1) {
         int ret = select(fd+1, p_rset, p_wset, NULL, &sel_tmout);
@@ -149,9 +148,10 @@ void* worker_func(void* arg)
         if (FD_ISSET(fd, p_rset)) {
             //Read everything to pw->mp_rbuf;
             //Parse 
+            
             FrameType_t ft = pw->mp_rbuf[offsetof(FrameHead_t, frm_type)];
-            unsigned char data_len = pw->mp_rbuf[offsetof(FrameHead_t, frm_len)];
-            char* payload = pw->mp_rbuf[sizeof(FrameHead_t)];
+            uint8_t data_len = pw->mp_rbuf[offsetof(FrameHead_t, frm_len)];
+            uint8_t* payload = pw->mp_rbuf[sizeof(FrameHead_t)];
             switch(ft) {
                 case DISPATCH_CARD_ACK:
                     {
@@ -169,19 +169,21 @@ void* worker_func(void* arg)
                             if ( payload[0] != payload[1] )
                                 break;
                         }
-                        //TODO, add ctor of Card
+                        uint8_t ack_tag = pw->mp_rbuf[offsetof(FrameHead_t, frm_type)];
+                        //TODO, add ctor of Card, Card(char);
                         Card prime(payload[0]); 
                         int ret = pm->Set_prime_card(prime, data_len);
                         if (ret == 0){
-                            //Generate CLAIM_PRIME_ACK package and send to client
-                            //Generate Bcast package and call Bcast
+                            Ack_prime_claim(ack_tag);
+                            Bcast_prime_claim(prime, data_len);
                         } else {
-                            //Generate CLAIM_PRIME_NACK package and send to client
+                            Nack_prime_claim(ack_tag);
                         }
                         break;
                     }
                 case CLAIM_PRIME_BCAST_ACK:
                     {
+                        //TODO: Check the validability of BCAST_ACK
                         int snd_id = pw->rbuf[offsetof(FrameHead_t, frm_src)];
                         pm->Get_worker(snd_id)->Set_worker_flag(id);
                         break;
@@ -262,9 +264,12 @@ void* worker_func(void* arg)
  * ft, Header method type
  * buf, the buffer to be filled, should be newed and deleted by caller
  * buf_len, length of buf
+ *
+ *@Note:
+ * ms_frame_num will ++ in generating NonACK headers
  */
     
-int Worker::Generate_frame(FrameHead_t ft, short ack_tag, void* buf, size_t buf_len)
+int Worker::Build_header(FrameHead_t ft, uint16_t ack_tag, void* buf, size_t buf_len)
 {
     if (ft < 0 || ft > FRAME_TYPE_MAX)
         return -1;
@@ -273,7 +278,7 @@ int Worker::Generate_frame(FrameHead_t ft, short ack_tag, void* buf, size_t buf_
     head->frm_magic_num = htonl(0xCAFEDADD);
     head->frm_src = mi_worker_id;
     head->frm_ver = 1;
-    head->frm_type = (char) ft;
+    head->frm_type = (uint8_t) ft;
     head->frm_len = buf_len - sizeof(FrameHead_t);
     head->frm_pad1 = 0;
     head->frm_pad2 = htons(0);
@@ -289,45 +294,98 @@ int Worker::Dispatch_card(const Card& card)
 {
     FrameType_t ft = DISPATCH_CARD;
     size_t buf_len = sizeof(FrameHead_t) + 1;
-    void* buf = new char [buf_len];
+    uint8_t* buf = new uint8_t [buf_len];
 
     //TODO: Card.Get_char();
     buf[sizeof(FrameHead_t)] = card.Get_char();
-    Generate_frame(ft, 0, buf, buf_len);
+    Build_header(ft, 0, buf, buf_len);
     Send_buf(buf, buf_len);
     delete [] buf;
+    return 0;
 }
 
-int Worker::Banker_notify()
+int Worker::Notify_banker()
 {
     FrameType_t ft = BANKER_NOTIF;
     size_t buf_len = sizeof(FrameHead_t);
-    void* buf = new char [buf_len];
+    uint8_t* buf = new uint8_t [buf_len];
 
-    Generate_frame(ft, 0, buf, buf_len);
+    Build_header(ft, 0, buf, buf_len);
     Send_buf(buf, buf_len);
     delete [] buf;
+    return 0;
 }
 
 //FIXME: This function may not be necessary
-int Worker::Swap_card_notify()
+int Worker::Notify_card_swap()
 {
     FrameType_t ft = SWAP_CARD_NOTIF;
     size_t buf_len = sizeof(FrameHead_t);
-    void* buf = new char [buf_len];
+    uint8_t* buf = new uint8_t [buf_len];
 
-    Generate_frame(ft, 0, buf, buf_len);
+    Build_header(ft, 0, buf, buf_len);
     Send_buf(buf, buf_len);
     delete [] buf;
+    return 0;
 }
 
-int Worker::Send_card_notify()
+int Worker::Notify_card_send()
 {
     FrameType_t ft = SND_CARD_NOTIF;
     size_t buf_len = sizeof(FrameHead_t);
-    void* buf = new char [buf_len];
+    uint8_t* buf = new uint8_t [buf_len];
 
-    Generate_frame(ft, 0, buf, buf_len);
+    Build_header(ft, 0, buf, buf_len);
     Send_buf(buf, buf_len);
     delete [] buf;
+    return 0;
+}
+
+int Worker::Notify_round_result()
+{
+
+}
+
+int Worker::Notify_set_result()
+{
+
+}
+
+int Worker::Ack_prime_claim(uint16_t ack_tag)
+{
+    FrameType_t ft = CLAIM_PRIME_ACK;
+    size_t buf_len = sizeof(FrameHead_t);
+    uint8_t* buf = new uint8_t [buf_len]; 
+
+    Build_header(ft, ack_tag, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+    return 0;
+}
+
+int Worker::Nack_prime_claim(short ack_tag)
+{
+    FrameType_t ft = CLAIM_PRIME_NACK;
+    size_t buf_len = sizeof(FrameHead_t);
+    uint8_t* buf = new uint8_t [buf_len]; 
+
+    Build_header(ft, ack_tag, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+    return 0;
+}
+
+int Worker::Bcast_prime_claim(const Card& prime, int num)
+{
+    FrameType_t ft = CLAIM_PRIME_BCAST;
+    size_t buf_len = sizeof(FrameHead_t) + num;
+    uint8_t* buf = new uint8_t [buf_len];
+    uint8_t* payload = buf + sizeof(FrameHead_t);
+
+    //TODO: Implement Card.Get_char() 
+    for (int i=0; i< num; i++)
+       payload[i] = prime.Get_char(); 
+
+    Build_header(ft, 0, buf, buf_len);
+    Bcast_to_others(buf, buf_len);
 }

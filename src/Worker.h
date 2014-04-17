@@ -3,9 +3,11 @@
 
 #include <sys/select.h>
 #include <pthread.h>
+#include <stdint.h>
 #include "MainWorker.h"
 #include "error.h"
 #include "Card.h"
+#include "Frame.h"
 
 #define BUF_LENGTH 50
 #define BASE_CARD_NUM 8
@@ -30,9 +32,6 @@ public:
     //Clear all worker_flag except self
     void Clear_worker_flag();   
 
-    bool Send_buf(char* buf, size_t sz);
-    bool Send_buf(int id, char* buf, size_t sz);
-
 public: 
     int Get_worker_id() { return mi_worker_id; }
     int Get_num_players() { return mi_num_players; }
@@ -48,21 +47,27 @@ public:
 public:
     //APIs For MainWorker 
     int Dispatch_card(const Card&);
-    int Banker_notify();
-    int Swap_card_notify();
-    int Send_card_notify();
-    int Round_result_notify();
-    int Set_result_notify();
+    int Notify_banker();
+    int Notify_card_swap();
+    int Notify_card_send();
+    int Notify_round_result();
+    int Notify_set_result();
 
+    //APIs for Worker
+    int Ack_prime_claim(uint16_t ack_tag);
+    int Nack_prime_claim(uint16_t ack_tag);
+    int Bcast_prime_claim(const Card&, int num);
 public:
-    int Generate_frame(FrameType_t ft, short ack_tag, void* buf, size_t buf_len);
+    int Build_header(FrameType_t ft, uint16_t ack_tag, void* buf, size_t buf_len);
 
 
 private:
     Worker(const Worker&);
     const Worker& operator= (const Worker&);
     bool Is_worker_flag_all_set();
-    bool Bcast_to_others(char* buf, size_t sz);
+    bool Send_buf(void* buf, size_t sz);
+    bool Send_buf(int id, void* buf, size_t sz);
+    bool Bcast_to_others(void* buf, size_t sz);
     
 private:
     short ms_frame_num;
@@ -75,8 +80,8 @@ private:
     pthread_t m_thread;
 
 private:
-    char* mp_rbuf;
-    char* mp_wbuf;
+    uint8_t* mp_rbuf;
+    uint8_t* mp_wbuf;
 
 private:
     fd_set m_rset;
