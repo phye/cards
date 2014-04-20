@@ -45,17 +45,19 @@ typedef struct _FrameHead_t {
 typedef enum _FrameType_t {
     DISPATCH_CARD = 0,
     CLAIM_PRIME,        //Sent from client
-    DISPATCH_CARD_ACK, 
-    CLAIM_PRIME_BCAST,
     BANKER_NOTIF,
     SWAP_CARD_NOTIF,    //Sent from server
     SWAP_CARD_DATA,     //Sent from client
     SND_CARD_NOTIF,
-    SND_CARD,      //Sent from client
-    SND_CARD_BCAST,
+    SND_CARD_DATA,      //Sent from client
     ROUND_RESULT_NOTIF,
     SET_RESULT_NOTIF,
+    BCAST_START,
+    CLAIM_PRIME_BCAST,
+    SND_CARD_DATA_BCAST,
+    SND_CARD_INVAL_DATA_BCAST, //Used for Invalid card sent 
     ACK_START,
+    DISPATCH_CARD_ACK, 
     CLAIM_PRIME_ACK,
     CLAIM_PRIME_NACK,   //Invalid prime request
     CLAIM_PRIME_BCAST_ACK,
@@ -63,9 +65,10 @@ typedef enum _FrameType_t {
     SWAP_CARD_NOTIF_ACK,
     SWAP_CARD_DATA_ACK,
     SND_CARD_NOTIF_ACK,
-    SND_CARD_ACK,
-    SND_CARD_NACK,
-    SND_CARD_BCAST_ACK,
+    SND_CARD_DATA_ACK,
+    SND_CARD_DATA_NACK,
+    SND_CARD_DATA_BCAST_ACK,
+    SND_CARD_INVAL_DATA_BCAST_ACK,
     ROUND_RESULT_NOTIF_ACK,
     SET_RESULT_NOTIF_ACK,
     FRAME_TYPE_MAX
