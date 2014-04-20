@@ -66,9 +66,11 @@ class ServerMaster{
         bool IsLastLoop();
 
     private:
+        //TODO: change these card holders to vector, according to discussion with Ye.
         CardSet remainingCards;
         CardSet* usedCards;//need to initialize for each player in constructor
         CardSet bottomCards;
+        Worker * workers;//intialize to proper number of workers
 
         int playerCount;
         int cardSetCount;
@@ -84,5 +86,14 @@ class ServerMaster{
         Card currentPrime;
 }
 
+/*******************************
+worker functions needed:
+
+1. workers[curPlayer].FetchCard(cardToDispatch);
+2. workers[curPlayer].NeedPrime();
+3. workers[curPlayer].GetPrime();
+4. workers[curPlayer].GetBanker();
+
+*******************************/
 
 #endif
