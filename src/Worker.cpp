@@ -1,10 +1,12 @@
-#include "Worker.h"
-#include "Frame.h"
-#include "Card.h"
 #include <stddef.h>
 #include <string.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+
+#include "Worker.h"
+#include "Frame.h"
+#include "Card.h"
+#include "Util.h"
 
 Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw) 
     : mi_worker_id(id), mi_num_players(np), mi_sock_fd(sfd),
@@ -204,14 +206,34 @@ int Worker::Notify_card_send()
     return Notify_helper(SND_CARD_NOTIF);
 }
 
-int Worker::Notify_round_result()
+int Worker::Notify_round_result(uint8_t winner_id, uint8_t pts)
 {
+    FrameType_t ft = ROUND_RESULT_NOTIF;
+    size_t buf_len = sizeof(FrameHead_t) + 2;
+    uint8_t* buf = new uint8_t [buf_len];
+    
+    buf[sizeof(FrameHead_t)] = winner_id;
+    buf[sizeof(FrameHead_t) + 1] = pts;
 
+    Build_header(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+    return 0;
 }
 
-int Worker::Notify_set_result()
+int Worker::Notify_set_result(uint8_t wg_id, uint8_t pts)
 {
+    FrameType_t ft = SET_RESULT_NOTIF;
+    size_t buf_len = sizeof(FrameHead_t) + 2;
+    uint8_t* buf = new uint8_t [buf_len];
+    
+    buf[sizeof(FrameHead_t)] = winner_id;
+    buf[sizeof(FrameHead_t) + 1] = pts;
 
+    Build_header(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+    return 0;
 }
 
 int Worker::Ack_helper(FrameHead_t ft, uint16_t ack_tag)
@@ -224,6 +246,7 @@ int Worker::Ack_helper(FrameHead_t ft, uint16_t ack_tag)
     delete [] buf;
     return 0;
 }
+
 int Worker::Ack_prime_claim(uint16_t ack_tag)
 {
     return Ack_helper(CLAIM_PRIME_ACK, ack_tag);
@@ -307,7 +330,7 @@ void* worker_func(void* arg)
 
     while(1) {
         int ret = select(fd+1, p_rset, p_wset, NULL, &sel_tmout);
-        //FIXME: Rely on system to restart select when interrupted in select
+        //FIXME: Rely on OS to restart select when interrupted in select
         if (FD_ISSET(fd, p_wset)) {
             int wsz = sizeof(FrameHead_t) + 
                 pw->mp_wbuf[offsetof(FrameHead_t, frm_len)];
@@ -317,13 +340,25 @@ void* worker_func(void* arg)
             pw->Clear_writable();
         }
         if (FD_ISSET(fd, p_rset)) {
-            //Read everything to pw->mp_rbuf;
-            //Parse 
+            //Read header first
+            int nr = sock_read(fd, pw->mp_rbuf, sizeof(FrameHead_t));
+            if (nr != sizeof(FrameHead_t))
+                exit(READ_INCOMPLETE);
+            uint32_t* magic = (uint32_t*) pw->mp_rbuf + 
+                offsetof(FrameHead_t, frm_magic_num);
+            if (*magic != 0xCAFEDADD)
+                exit(INVALID_PACKAGE);
             
             FrameType_t ft = pw->mp_rbuf[offsetof(FrameHead_t, frm_type)];
             uint8_t data_len = pw->mp_rbuf[offsetof(FrameHead_t, frm_len)];
             uint8_t* payload = pw->mp_rbuf[sizeof(FrameHead_t)];
             uint16_t ack_tag = pw->mp_rbuf[offsetof(FrameHead_t, frm_tag)];
+
+            //Time to read body
+            nr = sock_read(fd, payload, data_len);
+            if (nr != data_len)
+                exit(READ_INCOMPLETE);
+
             switch(ft) {
                 case DISPATCH_CARD_ACK:
                     {
@@ -358,6 +393,14 @@ void* worker_func(void* arg)
                         //TODO: need to add validity check for BCAST_ACK
                         int snd_id = pw->rbuf[offsetof(FrameHead_t, frm_src)];
                         pm->Get_worker(snd_id)->Set_worker_flag(id);
+                        break;
+                    }
+                case BANKER_NOTIF_ACK:
+                    {
+                        //FIXME: Is BANKER_NOTIF_ACK redundent? 
+                        //Maybe SWAP_CARD_NOTIF is enough
+                        
+                        //Currently do nothing
                         break;
                     }
                 case SWAP_CARD_NOTIF_ACK:
@@ -411,12 +454,21 @@ void* worker_func(void* arg)
                             pm->Set_next_ready();
                             pw->Clear_ready_for_card();
                         } else {
-                            pw->Nack_prime_claim(ack_tag);
+                            pw->Nack_snd_card_data(ack_tag);
                             pw->Bcast_inval_snd_card(snd_cards);
+                            //On getting SND_CARD_DATA_NACK, client must send
+                            //smallest card in snd_cards automatically
                         }
                         break;
                     }
                 case ROUND_RESULT_NOTIF_ACK:
+                    {
+                        pm->Set_record_bcast_flag(id);
+                        if (/* All workers are bcasted*/)
+                            pm->Set_next_ready();
+                        break;
+                    }
+                case SET_RESULT_NOTIF_ACK:
                     {
                         pm->Set_record_bcast_flag(id);
                         if (/* All workers are bcasted*/)
