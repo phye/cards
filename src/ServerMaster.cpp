@@ -116,17 +116,6 @@ void ServerMaster::Run()
 
             case CHANGE_CARD:
             {
-                // wait some time for other player to claim different prime
-
-                //Server should notify one player as the banker
-                /* 
-                * server -> client: Hey, you're the banker, and here's your new card
-                * client -> server: ACK
-                * client -> server: Here's the changed card
-                * server -> client: ACK
-                */ 
-                //send all the left cards to banker
-                //And wait for the banker to send cards back
                 this->ExchangeCard();
                 currentState = PLAYING;
                 firstPlayer = banker;
@@ -142,18 +131,11 @@ void ServerMaster::Run()
                 * server -> client: ACK FIXME: Is this necessary? //X1n: This is necessary, I think all card exchange action should be acked.
                 */
 
-                this->PlayOneLoop();
+                this->PlayOneHand();
 
                 //compare cards and record score for this round
                 // decide the first_player of the next round
-                if(IsLastLoop())
-                {
-                    currentState = RECORD;
-                }
-                else
-                {
-                    break;
-                }
+                currentState = RECORD_SCORE;
             }
 
             case RECORD_SCORE:
@@ -161,7 +143,17 @@ void ServerMaster::Run()
                 //Do some record
                 //Choose first player of next round
                 this->RecordScore();
-                //Fall through
+                if(!IsLastHand())
+                {
+                    currentState = PLAYING;
+                    break;
+                   
+                }
+                else
+                {
+                    currentState = ROUND_END;
+                    // Fall through
+                }
             }
         
             case ROUND_END:
@@ -244,32 +236,60 @@ void ServerMaster::WaitForPrime()
     }
 }
 
-void ServerMaster::ExchangeCard(Worker bankerWorker)
+void ServerMaster::ExchangeCard()
 {
+    //send all the left cards to banker
+    //And wait for the banker to send cards back
     Card cardToDispatch;
     for (int idx = 0; idx < 8; idx++)
     {
         cardToDispatch = remainingCards.GetFirstCard();
-        bankerWorker.FetchCard(cardToDispatch);
+        workers[banker].FetchCard(cardToDispatch);
     }
 
+    while(8 != bottomCards.GetCardCount())
+    {
+        // Notify and return
+        workers[banker].WaitChangeCard();
+        sleep(1000);
+    }
     //TODO: wait for banker to return cards to bottomCards, maybe wait for a flag?
 }
 
-void ServerMaster::PlayOneLoop()
+void ServerMaster::PlayOneHand()
 {
-    Card 
-    for()
-    {
-        card = worker[idx].PlayOneCard();
-    }
+    PLAYERNAME curPlayer = firstPlayer;
     
-    // compare 4 cards
-    // calculate score in this round
+    do
+    {
+        cardPlayed[curPlayer] = workers[curPlayer].PlayOneCard();
+        curPlayer = (curPlayer + 1) % playerCount;
+    }while(curPlayer != firstPlayer);
 }
 
 void ServerMaster::RecordScore()
 {
+    Card bigCard = cardPlayed[firstPlayer];
+    PLAYERNAME winner = firstPlayer;
+    PLAYERNAME player = (firstPlayer + 1) % MAX_PLAYER_COUNT;
+    int tempScore = cardPlayed[firstPlayer].GetScore();
+    do
+    {
+        if(bigCard < cardPlayed[player])
+        {
+            bigCard = cardPlayed[player];
+            winner = player;
+        }
+        tempScore += cardPlayed[player].GetScore();
+        player = (player + 1) % MAX_PLAYER_COUNT;
+    }while(player != firstPlayer);
+
+    playerScore[winner % 2] += tempScore;
+}
+
+void ServerMaster::RoundEnd()
+{
+    //calculate new level and set new first player
     if ((PLAYER_1 == banker) || (PLAYER_3 == banker))
     {
         if (playerScore[1] >= 80)
@@ -291,14 +311,10 @@ void ServerMaster::RecordScore()
     {
         ...
     }
-}
-
-void ServerMaster::RoundEnd()
-{
-    //calculate new level and set new first player
 
     // need to clear variables for the next round
     currentPrime = CARD_INVALID_VAL;
+    playerScore[0] = playerScore[1] = 0;
 }
 
 void ServerMaster::GameEnd()
@@ -372,8 +388,8 @@ bool ServerMaster::IsBanker(int player)
     return (player == banker);
 }
 
-bool IsLastLoop()
+bool ServerMaster::IsLastHand()
 {
-    return (remainingCards->GetCardCound() == 8);
+    return (cardsInHand[banker]->GetCardCount() == 0);
 }
 
