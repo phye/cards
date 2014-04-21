@@ -191,6 +191,7 @@ void ServerMaster::Run()
 
 void ServerMaster::Shuffle()
 {
+    // TODO: the content here should be changed, pending the change of CardSet
     remainingCards.RandomizeCardSet(cardSetCount);
 }
 
@@ -208,12 +209,38 @@ void ServerMaster::DispatchCard(Worker * workers)
 }
 
 void ServerMaster::WaitForPrime()
-{//TODO: need to set banker based on if it is the first round
-    wait(5*1000);//wait for 5s for player to claim other prime
+{//TODO: need to set banker based on if it is the first round, it should be also implemented in ClaimPrime()
+    int curPlayer = firstPlayer;
+    int idx;
+    
+    for(idx = 0; idx < playerCount; idx++)
+    {
+        workers[curPlayer].NeedPrime();
+        curPlayer++;
+        if(curPlayer == playerCount)
+        {
+            curPlayer = PLAYER_1;
+        }
+    }
+
+    sleep(5*1000);//wait for 5s for player to claim other prime
+    //workers who claims prime should wakeup me!!!
+    //Note: validation of claimed prime is performed in ClaimPrime() which will be called by worker.
+    //      And it will decide whether keep sleep or wakeup
+    //      But how long should it be for the second sleep?
+
+    //still nobody claims
     if(CARD_INVALID_VAL == currentPrime)
     {
         currentPrime = bottomCards.GetBiggest();
-        //notify workers
+        //TODO: who is the banker now?
+    }
+    
+    //notify workers
+    for(curPlayer = PLAYER_1; curPlayer < playerCount; curPlayer++)
+    {
+        workers[curPlayer].GetPrime();
+        workers[curPlayer].GetBanker();
     }
 }
 
