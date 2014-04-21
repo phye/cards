@@ -34,17 +34,19 @@ public:
     int Notify_banker();
     int Notify_card_swap();
     int Notify_card_send();
-    int Notify_round_result();
-    int Notify_set_result();
+    int Notify_round_result(uint8_t winner_id, uint8_t pts);
+    int Notify_set_result(uint8_t wg_id, uint8_t pts);
 
     //APIs for Worker
     int Ack_prime_claim(uint16_t ack_tag);
     int Nack_prime_claim(uint16_t ack_tag);
-    int Bcast_prime_claim(const Card&, int num);
     int Ack_swap_card_data(uint16_t ack_tag);
     int Ack_snd_card_data(uint16_t ack_tag);
     int Nack_snd_card_data(uint16_t ack_tag);
+
+    int Bcast_prime_claim(const Card&, int num);
     int Bcast_snd_card(const CardSet& cs);
+    int Bcast_inval_snd_card(const CardSet& cs);
 
     friend void* worker_func(void* arg);
 

@@ -7,4 +7,6 @@
 #define SEND_BUF_TIMEOUT -101
 #define BCAST_BUF_TIMEOUT -102
 
+#define READ_INCOMPLETE -200
+#define INVALID_PACKAGE -201
 #endif
