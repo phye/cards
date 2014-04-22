@@ -24,7 +24,9 @@ typedef enum PLAY_STATE{
     GAME_END
 } PLAYSTATE;
 
-#define LEVEL_GAP_DEFAULT 20
+#define LEVEL_GAP_DEFAULT   20
+#define LEVEL_END           16
+
 
 class ServerMaster{
     public: 
@@ -34,7 +36,7 @@ class ServerMaster{
 
         // Init environment and ready for play
         bool Init();
-        bool WaitPlayerReady();
+        void WaitPlayerReady();
         
         // Card playing
         void Reset();//reset all data
@@ -53,7 +55,6 @@ class ServerMaster{
         int  GetCurrentRound();
         int  GetPlayingLevel(PLAYERNAME player);
         Card GetCurrentPrime();
-        int  GetCurrentRound();
         int  GetBanker(void);
         PLAYSTATE GetCurrentState();
 

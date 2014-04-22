@@ -1,22 +1,23 @@
 #include "ServerMaster.h"
 
-ServerMaster::ServerMaster(int nPlayers, int nCardSets)
+ServerMaster::ServerMaster(int nPlayers = MAX_PLAYER_COUNT, int nCardSets = 2)
 {
     playerCount = nPlayers;
     cardSetCount = nCardSets;
-    remainingCards = new CardSet(cardSetCount);
+    allCards = new CardSet(cardSetCount);
 
     usedCards = new CardSet[playerCount];//need to initialize for each player in constructor
     bottomCards = new CardSet(4 * cardSetCount);
 
     levelGap = LEVEL_GAP_DEFAULT;
     playerScore = new int[playerCount];
+    MemSet(playerScore, 0, playerCount);
     currentRound = 0;
     banker = PLAYER_NONE;
     firstPlayer = PLAYER_1; //set to player_1 for use in dispatch in the first round
 
 
-    MemSet(playingLevel, 0, 2);
+    playingLevel[0] = playingLevel[1] = 2;
     currentPrime = CARD_INVALID_VAL;
 }
 
@@ -39,7 +40,9 @@ bool ServerMaster::Init()
     
     cout << "How many set of cards? (Default = %d)" << cardSetCount << endl;
     cin >> cardSetCount;
-        
+
+    cout << "Level gap? (Default = %d)" << levelGap << endl;
+    cin >> levelGap;
     // May need to init the size of card sets?
     
     //TODO: create sockets.
@@ -58,10 +61,12 @@ bool ServerMaster::Init()
 
     //listen to each sockets
     //link to workes
+    WaitPlayerReady();
+    currentState = SHUFFLE_CARDS;
     return status;
 }
 
-bool ServerMaster::WaitPlayerReady()
+void ServerMaster::WaitPlayerReady()
 {
     //listen to sockets and wait for bind? I don't know how to write this.
 }
@@ -80,10 +85,10 @@ void ServerMaster::Reset()//reset all data
     MemSet(playerScore, 0, playerCount);
     currentRound = 0;
     banker = PLAYER_NONE;
-    firstPlayer = PLAYER_NONE;
+    firstPlayer = PLAYER_1;
         
-    MemeSet(playingLevel, 0, 2);
-    currentPrime = INVALID_CARD;
+    playingLevel[0] = playingLevel[1] = 2;
+    currentPrime = CARD_INVALID_VAL;
     currentState = SHUFFLE_CARDS;
 }
 
@@ -159,7 +164,7 @@ void ServerMaster::Run()
             case ROUND_END:
             {
                 this->RoundEnd();
-                if((LEVEL_END == playingLevel[0]) || (LEVEL_END == playingLevel[1]))
+                if((LEVEL_END =< playingLevel[0]) || (LEVEL_END =< playingLevel[1]))
                 {
                     currentState = GAME_END;
                 }
@@ -173,8 +178,15 @@ void ServerMaster::Run()
             case GAME_END:
             {
                 this->GameEnd();
-                    
-                break;
+                if(SHUFFLE_CARDS == currentState)
+                {
+                    // play again
+                    break;
+                }
+                else
+                {
+                    return;
+                }
             }
         }
     }
@@ -184,7 +196,7 @@ void ServerMaster::Run()
 void ServerMaster::Shuffle()
 {
     // TODO: the content here should be changed, pending the change of CardSet
-    remainingCards.RandomizeCardSet(cardSetCount);
+    allCards.RandomizeCardSet(cardSetCount);
 }
 
 void ServerMaster::DispatchCard(Worker * workers)
@@ -194,10 +206,11 @@ void ServerMaster::DispatchCard(Worker * workers)
     
     do
     {
-        cardToDispatch = remainingCards.GetFirstCard();
+        cardToDispatch = allCards.GetFirstCard();
         workers[curPlayer].FetchCard(cardToDispatch);
+        cardsInHand[curPlayer].Add_card(&cardToDispatch);
         curPlayer = ((curPlayer + 1) == MAX_PLAYER_COUNT) ? PLAYER_1 : (curPlayer + 1);
-    }while(remainingCards.GetCount() > 8);
+    }while(allCards.GetCount() > 8);
 }
 
 void ServerMaster::WaitForPrime()
@@ -245,6 +258,7 @@ void ServerMaster::ExchangeCard()
     {
         cardToDispatch = remainingCards.GetFirstCard();
         workers[banker].FetchCard(cardToDispatch);
+        cardsInHand[banker].Add_card(cardToDispatch);
     }
 
     while(8 != bottomCards.GetCardCount())
@@ -253,6 +267,7 @@ void ServerMaster::ExchangeCard()
         workers[banker].WaitChangeCard();
         sleep(1000);
     }
+    //Del cards in bottomCards from cardsInHand[banker]
     //TODO: wait for banker to return cards to bottomCards, maybe wait for a flag?
 }
 
@@ -296,20 +311,27 @@ void ServerMaster::RoundEnd()
         {
             //turn over
             banker++;
-            //won't have below issue, need to move to else..
-            if (MAX_PLAYER_COUNT == banker)
-            {
-                banker = PLAYER_1;
-            }
+            playingLevel[1] += (playerScore[1] - 80) / levelGap;
         }
         else
         {
-            if()
+            banker = (banker + 2) % MAX_PLAYER_COUNT;
+            playingLevel[0] += (playerScore[0] - 120) / levelGap + 1;
         }
     }
     else
     {
-        ...
+        if (playerScore[0] >= 80)
+        {
+            //turn over
+            banker = (banker + 1) % MAX_PLAYER_COUNT;
+            playingLevel[0] += (playerScore[0] - 80) / levelGap;
+        }
+        else
+        {
+            banker = (banker + 2) % MAX_PLAYER_COUNT;
+            playingLevel[1] += (playerScore[1] - 120) / levelGap + 1;
+        }
     }
 
     // need to clear variables for the next round
@@ -322,10 +344,10 @@ void ServerMaster::GameEnd()
     //notify the worker, Show the game result
     //exit program or start another game by user's choice
     bool playAgain;
-    cout << "Wanner play again?" << endl;
+    cout << "Wanner play again? (Y/N)" << endl;
     cin >> playAgain;
 
-    if (playAgain)
+    if (('y' == playAgain) || ('Y' == playAgain))
     {
         this->Reset();
         currentState = SHUFFLE_CARDS;
@@ -363,27 +385,48 @@ Card ServerMaster::GetCurrentPrime()
     return currentPrime;
 }
 
-int ServerMaster::GetCurrentRound()
-{
-    return currentRound;
-}
-
 int ServerMaster::GetBanker(void)
 {
     return banker;
 }
 
-void ServerMaster::SetBanker(int newBanker)
+PLAYSTATE ServerMaster::GetCurrentState()
+{
+    return currentState;
+}
+
+// Setting info
+bool ServerMaster::ClaimPrime(Card claimingCard)
+{
+    if(CARD_INVALID_VAL == currentPrime)
+    {
+        currentPrime = claimingCard;
+        return TRUE;
+    }
+    else
+    {
+        if(((BJOKER != currentPrime) && (CJOKER != currentPrime)) &&
+            ((BJOKER == claimingCard) || (CJOKER == claimingCard)))
+        {
+            currentPrime = claimingCard;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void ServerMaster::SetBanker(PLAYERNAME newBanker)
 {
     banker = newBanker;
 }
+
 
 void ServerMaster::SetLevelGap(int gap)
 {
     levelGap = gap;
 }
 
-bool ServerMaster::IsBanker(int player)
+bool ServerMaster::IsBanker(PLAYERNAME player)
 {
     return (player == banker);
 }
