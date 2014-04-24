@@ -11,20 +11,21 @@ ServerMaster::ServerMaster(int nPlayers = MAX_PLAYER_COUNT, int nCardSets = 2)
 
     levelGap = LEVEL_GAP_DEFAULT;
     playerScore = new int[playerCount];
-    MemSet(playerScore, 0, playerCount);
-    currentRound = 0;
+    memset(playerScore, 0, playerCount);
+    currentSet = 0;
     banker = PLAYER_NONE;
     firstPlayer = PLAYER_1; //set to player_1 for use in dispatch in the first round
 
 
     playingLevel[0] = playingLevel[1] = 2;
     currentPrime = CARD_INVALID_VAL;
+    Reset();//TODO: with calling this function, some of the above lines can be removed.
 }
 
 ServerMaster::~ServerMaster()
 {
     //delete card sets
-    delete remainingCards;
+    delete allCards;
     delete usedCards;
     delete bottomCards;
 
@@ -45,22 +46,6 @@ bool ServerMaster::Init()
     cin >> levelGap;
     // May need to init the size of card sets?
     
-    //TODO: create sockets.
-    
-    g_fds = new int [playerCount]; 
-
-    for(int idx = 0; idx < playerCount; idx++)
-    {
-        g_fds[idx] = accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-        if(-1 != g_fds[idx])
-        {
-            //For now, we just kill the program itself on error, error handling will be developed later.
-            exit -1;
-        }
-    }
-
-    //listen to each sockets
-    //link to workes
     WaitPlayerReady();
     currentState = SHUFFLE_CARDS;
     return status;
@@ -68,12 +53,24 @@ bool ServerMaster::Init()
 
 void ServerMaster::WaitPlayerReady()
 {
+    //TODO: create sockets.
+    //TODO: Leave to Ye.
+    fds = new int [playerCount]; 
     //listen to sockets and wait for bind? I don't know how to write this.
+    for(int idx = 0; idx < playerCount; idx++)
+    {
+        fds[idx] = accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+        if(-1 != fds[idx])
+        {
+            //For now, we just kill the program itself on error, error handling will be developed later.
+            exit -1;
+        }
+    }
 }
 
 void ServerMaster::Reset()//reset all data
 {
-    remainingCards.Clear();
+    allCards.Clear();
     usedCards.Clear();
     bottomCards.Clear();
 
@@ -82,14 +79,15 @@ void ServerMaster::Reset()//reset all data
         usedCards[i].Clear();
     }
 
-    MemSet(playerScore, 0, playerCount);
-    currentRound = 0;
+    memset(playerScore, 0, playerCount);
+    currentSet = 0;
     banker = PLAYER_NONE;
     firstPlayer = PLAYER_1;
         
     playingLevel[0] = playingLevel[1] = 2;
     currentPrime = CARD_INVALID_VAL;
     currentState = SHUFFLE_CARDS;
+    workerReadyFlag = 0;
 }
 
 void ServerMaster::Run()
@@ -100,14 +98,14 @@ void ServerMaster::Run()
         {
             case SHUFFLE_CARDS:
             {
-                this->Shuffle();
+                Shuffle();
                 currentState = DISPATCHING_CARDS;					
                 // Fall through
             }
 
             case DISPATCHING_CARDS:
             {
-                this->DispatchCard();
+                DispatchCard();
                 currentState = WAITING_PRIME;  
                 // Fall through
             }
@@ -136,7 +134,7 @@ void ServerMaster::Run()
                 * server -> client: ACK FIXME: Is this necessary? //X1n: This is necessary, I think all card exchange action should be acked.
                 */
 
-                this->PlayOneHand();
+                this->PlayOneRound();
 
                 //compare cards and record score for this round
                 // decide the first_player of the next round
@@ -148,7 +146,7 @@ void ServerMaster::Run()
                 //Do some record
                 //Choose first player of next round
                 this->RecordScore();
-                if(!IsLastHand())
+                if(!IsLastRound())
                 {
                     currentState = PLAYING;
                     break;
@@ -156,15 +154,15 @@ void ServerMaster::Run()
                 }
                 else
                 {
-                    currentState = ROUND_END;
+                    currentState = SET_END;
                     // Fall through
                 }
             }
         
-            case ROUND_END:
+            case SET_END:
             {
-                this->RoundEnd();
-                if((LEVEL_END =< playingLevel[0]) || (LEVEL_END =< playingLevel[1]))
+                this->SetEnd();
+                if((LEVEL_END <= playingLevel[0]) || (LEVEL_END <= playingLevel[1]))
                 {
                     currentState = GAME_END;
                 }
@@ -195,8 +193,9 @@ void ServerMaster::Run()
 
 void ServerMaster::Shuffle()
 {
+    CardSet cardset(cardSetCount);
     // TODO: the content here should be changed, pending the change of CardSet
-    allCards.RandomizeCardSet(cardSetCount);
+    cardset.RandomizeCardSet(&allCards);
 }
 
 void ServerMaster::DispatchCard(Worker * workers)
@@ -207,9 +206,10 @@ void ServerMaster::DispatchCard(Worker * workers)
     do
     {
         cardToDispatch = allCards.GetFirstCard();
-        workers[curPlayer].FetchCard(cardToDispatch);
+        workers[curPlayer].Dispatch_card(&cardToDispatch);
         cardsInHand[curPlayer].Add_card(&cardToDispatch);
-        curPlayer = ((curPlayer + 1) == MAX_PLAYER_COUNT) ? PLAYER_1 : (curPlayer + 1);
+        WaitSetReady();
+        curPlayer = (curPlayer + 1) % playerCount;
     }while(allCards.GetCount() > 8);
 }
 
@@ -217,7 +217,12 @@ void ServerMaster::WaitForPrime()
 {//TODO: need to set banker based on if it is the first round, it should be also implemented in ClaimPrime()
     int curPlayer = firstPlayer;
     int idx;
-    
+//TODO:
+// 1. sleep
+// 2. if no prime, check bottom card
+// 3. notify banker and prime
+
+/*
     for(idx = 0; idx < playerCount; idx++)
     {
         workers[curPlayer].NeedPrime();
@@ -227,8 +232,8 @@ void ServerMaster::WaitForPrime()
             curPlayer = PLAYER_1;
         }
     }
-
-    sleep(5*1000);//wait for 5s for player to claim other prime
+*/
+    sleep(5);//wait for 5s for player to claim other prime
     //workers who claims prime should wakeup me!!!
     //Note: validation of claimed prime is performed in ClaimPrime() which will be called by worker.
     //      And it will decide whether keep sleep or wakeup
@@ -239,24 +244,32 @@ void ServerMaster::WaitForPrime()
     {
         currentPrime = bottomCards.GetBiggest();
         //TODO: who is the banker now?
+        //notify workers
+        for(curPlayer = PLAYER_1; curPlayer < playerCount; curPlayer++)
+        {
+            workers[curPlayer].NotifyPrime(currentPrime);
+        }
     }
     
-    //notify workers
     for(curPlayer = PLAYER_1; curPlayer < playerCount; curPlayer++)
     {
-        workers[curPlayer].GetPrime();
-        workers[curPlayer].GetBanker();
+        workers[curPlayer].NotifyBanker(banker);
     }
+    
 }
 
 void ServerMaster::ExchangeCard()
 {
     //send all the left cards to banker
     //And wait for the banker to send cards back
+    //1. notify
+    //2. wait ready
+    //3. swap_card
+    //4. wait ready
     Card cardToDispatch;
     for (int idx = 0; idx < 8; idx++)
     {
-        cardToDispatch = remainingCards.GetFirstCard();
+        cardToDispatch = allCards.GetFirstCard();
         workers[banker].FetchCard(cardToDispatch);
         cardsInHand[banker].Add_card(cardToDispatch);
     }
@@ -265,18 +278,21 @@ void ServerMaster::ExchangeCard()
     {
         // Notify and return
         workers[banker].WaitChangeCard();
-        sleep(1000);
+        sleep(1);
     }
     //Del cards in bottomCards from cardsInHand[banker]
     //TODO: wait for banker to return cards to bottomCards, maybe wait for a flag?
 }
 
-void ServerMaster::PlayOneHand()
+void ServerMaster::PlayOneRound()
 {
     PLAYERNAME curPlayer = firstPlayer;
     
     do
     {
+        //1. notify
+        //2. wait ready
+
         cardPlayed[curPlayer] = workers[curPlayer].PlayOneCard();
         curPlayer = (curPlayer + 1) % playerCount;
     }while(curPlayer != firstPlayer);
@@ -284,7 +300,7 @@ void ServerMaster::PlayOneHand()
 
 void ServerMaster::RecordScore()
 {
-    Card bigCard = cardPlayed[firstPlayer];
+    CardSet bigCard = cardPlayedInThisRound[firstPlayer];
     PLAYERNAME winner = firstPlayer;
     PLAYERNAME player = (firstPlayer + 1) % MAX_PLAYER_COUNT;
     int tempScore = cardPlayed[firstPlayer].GetScore();
@@ -300,9 +316,10 @@ void ServerMaster::RecordScore()
     }while(player != firstPlayer);
 
     playerScore[winner % 2] += tempScore;
+    //TODO: notify score to everyone and wait ready
 }
 
-void ServerMaster::RoundEnd()
+void ServerMaster::SetEnd()
 {
     //calculate new level and set new first player
     if ((PLAYER_1 == banker) || (PLAYER_3 == banker))
@@ -310,7 +327,7 @@ void ServerMaster::RoundEnd()
         if (playerScore[1] >= 80)
         {
             //turn over
-            banker++;
+            banker = (banker + 1) % MAX_PLAYER_COUNT;
             playingLevel[1] += (playerScore[1] - 80) / levelGap;
         }
         else
@@ -337,11 +354,13 @@ void ServerMaster::RoundEnd()
     // need to clear variables for the next round
     currentPrime = CARD_INVALID_VAL;
     playerScore[0] = playerScore[1] = 0;
+    //notify result and wait ready
 }
 
 void ServerMaster::GameEnd()
 {
-    //notify the worker, Show the game result
+    //TODO: notify the worker, Show the game result, wait ready
+    
     //exit program or start another game by user's choice
     bool playAgain;
     cout << "Wanner play again? (Y/N)" << endl;
@@ -349,8 +368,8 @@ void ServerMaster::GameEnd()
 
     if (('y' == playAgain) || ('Y' == playAgain))
     {
-        this->Reset();
-        currentState = SHUFFLE_CARDS;
+        Reset();
+        //currentState = SHUFFLE_CARDS;
     }
 }
 
@@ -363,9 +382,9 @@ void ServerMaster::GetScore(int* scoreContainer)
 }
 
 
-int ServerMaster::GetCurrentRound()
+int ServerMaster::GetCurrentSet()
 {
-    return currentRound;
+    return currentSet;
 }
 
 int ServerMaster::GetPlayingLevel(PLAYERNAME player)
@@ -426,12 +445,17 @@ void ServerMaster::SetLevelGap(int gap)
     levelGap = gap;
 }
 
+void ServerMaster::SetNextReady(int workerId)
+{
+    workerReadyFlag += workerId;
+}
+
 bool ServerMaster::IsBanker(PLAYERNAME player)
 {
     return (player == banker);
 }
 
-bool ServerMaster::IsLastHand()
+bool ServerMaster::IsLastRound()
 {
     return (cardsInHand[banker]->GetCardCount() == 0);
 }

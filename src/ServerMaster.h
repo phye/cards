@@ -31,7 +31,7 @@ typedef enum PLAY_STATE{
 class ServerMaster{
     public: 
         //initialize all needed variables and environment for card in constructor, also need to create workers
-        ServerMaster(int nPlayers, int nCardSets);
+        ServerMaster();
         ~ServerMaster();
 
         // Init environment and ready for play
@@ -41,18 +41,18 @@ class ServerMaster{
         // Card playing
         void Reset();//reset all data
         void Run();
-        void Shuffle(CardSet cardset);
+        void Shuffle();
         void DispatchCard();
         void WaitForPrime();
         void ExchangeCard();
-        void PlayOneHand();
+        void PlayOneRound();
         void RecordScore();
         void RoundEnd();
         void GameEnd();
 
         // Getting info
         void GetScore(int* scoreContainer);
-        int  GetCurrentRound();
+        int  GetCurrentSet();
         int  GetPlayingLevel(PLAYERNAME player);
         Card GetCurrentPrime();
         int  GetBanker(void);
@@ -62,6 +62,8 @@ class ServerMaster{
         bool ClaimPrime(Card claimingCard);
         void SetBanker(int newBanker);
         void SetLevelGap(int gap);
+
+        void SetNextReady(int workerId);
         
         bool IsBanker(int player);
 
@@ -70,11 +72,14 @@ class ServerMaster{
 
     private:
         //TODO: change these card holders to vector, according to discussion with Ye.
-        CardSet allCards;
+        vector<Card> allCards;//the card stack, all cards after shuffle
         CardSet* usedCards;//need to initialize for each player in constructor, card played by one player
+                            //Do we really need this? but we can still keep track of it
         CardSet* cardsInHand;//track the cards in player's hand to judge if there's illegal playing.
+                             //but this could be done in Client, can remove this member
+                             //!!!Server should track this too, considering ShuaiPai, or it may be rejected during broadcast?
         CardSet bottomCards;
-        vector<Card> cardPlayed;//TODO: further consideration: ShuaiPai, how to store and how to compare, card played by one player in this hand
+        CardSet* cardPlayedInThisRound;//TODO: further consideration: ShuaiPai, how to store and how to compare, card played by one player in this hand
         Worker * workers;//intialize to proper number of workers
 
         int playerCount;
@@ -83,13 +88,17 @@ class ServerMaster{
 
         PLAYSTATE currentState;
         int playerScore[2];
-        int currentRound;
-        int currentHand;//maybe we don't need this
+        int currentSet;
+        int currentRound;//maybe we don't need this
         
         PLAYERNAME banker;
         PLAYERNAME firstPlayer;
         int playingLevel[2];//level0 for PLAYER1/3, level1 for PLAYER2/4
         Card currentPrime;
+
+        int workerReadyFlag;
+
+        int* fds;
 };
 
 /*******************************
@@ -104,6 +113,7 @@ worker functions needed:
 
 card functions:
 1. cardPlayed[PLAYER_1].GetScore()
+2. cardset.CopyToVector(allCards);
 *******************************/
 
 #endif
