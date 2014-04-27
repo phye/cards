@@ -2,6 +2,8 @@
 #define _SERVER_MASTER_H_
 
 #include <vector>
+using std::vector;
+
 
 typedef enum PLAYER_NAME
 {
@@ -20,13 +22,13 @@ typedef enum PLAY_STATE{
     CHANGE_CARD,
     PLAYING,
     RECORD_SCORE,
+    SET_END,
     ROUND_END,
     GAME_END
 } PLAYSTATE;
 
 #define LEVEL_GAP_DEFAULT   20
 #define LEVEL_END           16
-
 
 class ServerMaster{
     public: 
@@ -59,46 +61,48 @@ class ServerMaster{
         PLAYSTATE GetCurrentState();
 
         // Setting info
-        bool ClaimPrime(Card claimingCard);
+        bool ClaimPrime(CardSet claimingCard, int workerID);
         void SetBanker(int newBanker);
         void SetLevelGap(int gap);
 
         void SetNextReady(int workerId);
         
-        bool IsBanker(int player);
+        bool IsBanker(PLAYERNAME player);
 
     private:
-        bool IsLastHand();
+        void WaitWorkerSetReady(int workerID);
+        void WaitWorkerSetReady();
+        bool IsLastRound();
 
     private:
-        //TODO: change these card holders to vector, according to discussion with Ye.
-        vector<Card> allCards;//the card stack, all cards after shuffle
-        CardSet* usedCards;//need to initialize for each player in constructor, card played by one player
+        vector<Card> allCards(108, CARD_INVALID_VAL);//the card stack, all cards after shuffle
+        vector<CardSet> usedCards(MAX_PLAYER_COUNT);//need to initialize for each player in constructor, card played by one player
                             //Do we really need this? but we can still keep track of it
-        CardSet* cardsInHand;//track the cards in player's hand to judge if there's illegal playing.
+        vector<CardSet> cardsInHand(MAX_PLAYER_COUNT);//track the cards in player's hand to judge if there's illegal playing.
                              //but this could be done in Client, can remove this member
                              //!!!Server should track this too, considering ShuaiPai, or it may be rejected during broadcast?
         CardSet bottomCards;
-        CardSet* cardPlayedInThisRound;//TODO: further consideration: ShuaiPai, how to store and how to compare, card played by one player in this hand
-        Worker * workers;//intialize to proper number of workers
+        vector<CardSet> cardPlayedInThisRound(MAX_PLAYER_COUNT);//TODO: further consideration: ShuaiPai, how to store and how to compare, card played by one player in this hand
+        vector<Worker> workers(MAX_PLAYER_COUNT);//intialize to proper number of workers
 
         int playerCount;
         int cardSetCount;
         int levelGap;//20 points or 40 points?
 
         PLAYSTATE currentState;
-        int playerScore[2];
+        vector<int> playerScore(2, 0);
         int currentSet;
         int currentRound;//maybe we don't need this
         
         PLAYERNAME banker;
         PLAYERNAME firstPlayer;
-        int playingLevel[2];//level0 for PLAYER1/3, level1 for PLAYER2/4
+        vector<int> playingLevel(2, 2);//level0 for PLAYER1/3, level1 for PLAYER2/4
         Card currentPrime;
+        bool doubleClaim;//indicate if currentPrime is claimed by double card
 
-        int workerReadyFlag;
+        int workerReadyFlag;//Ready Flag: A 1 on corresponding bit means not ready, set ready will clear the bit
 
-        int* fds;
+        vector<int> fds(MAX_PLAYER_COUNT);
 };
 
 /*******************************
