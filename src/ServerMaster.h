@@ -66,6 +66,9 @@ class ServerMaster{
         void SetLevelGap(int gap);
 
         void SetNextReady(int workerId);
+        void ReturnBottomCard(CardSet returnedCard);
+        bool IsValidSend(int workerId, CardSet cards);
+        void SendCard(int workerId, CardSet cards);
         
         bool IsBanker(PLAYERNAME player);
 
@@ -73,6 +76,7 @@ class ServerMaster{
         void WaitWorkerSetReady(int workerID);
         void WaitWorkerSetReady();
         bool IsLastRound();
+        bool SanityCheck(CardSet cards);
 
     private:
         vector<Card> allCards(108, CARD_INVALID_VAL);//the card stack, all cards after shuffle

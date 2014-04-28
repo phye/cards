@@ -278,6 +278,7 @@ void ServerMaster::RecordScore()
     }
 
     currentRound++;
+    cardPlayedInThisRound[]//TODO: need to clear it
     firstPlayer = winner;
 }
 
@@ -285,6 +286,9 @@ void ServerMaster::SetEnd()
 {
     int idx;
     PLAYER_NAME setWinner;
+
+    //TODO: first calculate scores in bottom card
+    
     //calculate new level and set new banker
     if ((PLAYER_1 == banker) || (PLAYER_3 == banker))
     {
@@ -392,6 +396,7 @@ PLAYSTATE ServerMaster::GetCurrentState()
 
 bool ServerMaster::ClaimPrime(CardSet claimingCard, int workerID)
 {
+    // This function is so ugly
     bool isDoubleClaim;
 
     if (claimingCard.Size() > 2)
@@ -459,6 +464,55 @@ void ServerMaster::SetNextReady(int workerId)
     workerReadyFlag |= (1 << workerId);
 }
 
+void ServerMaster::ReturnBottomCard(CardSet returnedCard)
+{
+    assert(0 == bottomCards.Size());
+    bottomCards = returnedCard;
+    cardsInHand[banker].Del_card(returnedCard);
+}
+
+// Note: The client should make sure that the played cardset obeys basic rules
+bool ServerMaster::IsValidSend(int workerId, CardSet cards)
+{
+    if(!SanityCheck(cards))
+    {
+        return FALSE;
+    }
+    
+    if(1 == cards.Size())
+    {
+        if(workerId == firstPlayer)
+        {
+            return TRUE;
+        }
+        else 
+        {
+            if(cards.Color() == cardPlayedInThisRound[firstPlayer].Color())
+            {
+                return TRUE;
+            }
+            else
+            {
+                return FALSE;
+            }
+        }
+    }
+    else
+    {
+        if(workerId == firstPlayer)
+        {
+            //ToDo: Fix this ShuaiPai validation
+        }
+    }
+}
+
+void ServerMaster::SendCard(int workerId, CardSet cards)
+{
+    usedCards[workerId].Add_card(cards);
+    cardsInHand[workerId].Del_card(cards);
+    cardPlayedInThisRound[workerId].Add_card(cards);
+}
+
 bool ServerMaster::IsBanker(PLAYERNAME player)
 {
     return (player == banker);
@@ -487,3 +541,8 @@ bool ServerMaster::IsLastRound()
     return (cardsInHand[banker]->GetCardCount() == 0);
 }
 
+bool ServerMaster::SanityCheck(CardSet cards)
+{
+    //TODO: need to complete this
+    return TRUE;
+}
