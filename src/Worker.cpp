@@ -18,6 +18,7 @@ Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw)
     mp_worker_flag[mi_worker_id] = 1;
     mb_ready_for_swap_card = false;
     mb_ready_for_card = false;
+    mb_is_writing = false;
 
     mp_rbuf = new uint8_t [BUF_LENGTH];
     mp_wbuf = new uint8_t [BUF_LENGTH];
@@ -29,6 +30,7 @@ Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw)
 
     FD_SET(mi_sock_fd, &m_rset);
 
+    pthread_mutex_init(&m_mtx, NULL);
     pthread_create(&m_thread, NULL, worker_func, (void*) this);
 }
 
@@ -40,20 +42,24 @@ Worker::~Worker()
     pthread_exit((void*) 0);
 }
 
-void Worker::Set_writable()
+int Worker::Check_and_set_writing()
 {
-    int sec = 0;
-    //If fd is already set in wr set, we're already writing, wait until timeout
-    while( FD_ISSET(mi_sock_fd, &m_wset) ) 
-    {
-        if (sec == mi_time_out)
-            exit(SET_WRITABLE_TIMEOUT);
-        sleep(1);
-        sec ++;
+    pthread_mutex_lock(&m_mtx);
+    if( mb_is_writing ) {
+        pthread_mutex_unlock(&m_mtx);
+        return ALREADY_WRITING;
+    } else {
+        mb_is_writing = true;
+        pthread_mutex_unlock(&m_mtx);
+        return 0;
     }
-    //FIXME: should I add mutex here? 
-    //Phye: Yes, add mutex here
-    FD_SET(mi_sock_fd, &m_wset);
+}
+
+int Worker::Clear_writing()
+{
+    //FIXME: Should I add mutex here?
+    mb_is_writing = false;
+    return 0;
 }
 
 void Worker::Set_worker_flag(int worker_id)
@@ -74,13 +80,12 @@ void Worker::Clear_worker_flag()
 // Caller are responsible for free buf
 bool Worker::Send_buf(void* buf, int sz)
 {
-    int sec = 0;
-    while( FD_ISSET(mi_sock_fd, &m_wset) ) 
-    {
-        if (sec == mi_time_out)
+    int retry = 0;
+    while( Check_and_set_writing() ){
+        if( retry > 50 )
             exit(SEND_BUF_TIMEOUT);
-        sleep(1);
-        sec ++;
+        retry ++;
+        //TODO: sleep for 20 ms
     }
 
     memset(mp_wbuf, 0, BUF_LENGTH);
@@ -191,12 +196,14 @@ int Worker::Notify_helper(FrameHead_t ft)
 
 int Worker::Notify_banker()
 {
+    //TODO: Should notify other workers who's banker
     return Notify_helper(BANKER_NOTIF);
 }
 
 //FIXME: This function may not be necessary
 int Worker::Notify_card_swap()
 {
+    //TODO: Server should send card first
     return Notify_helper(SWAP_CARD_NOTIF);
 }
 
@@ -221,7 +228,7 @@ int Worker::Notify_round_result(uint8_t winner_id, uint8_t pts)
     return 0;
 }
 
-int Worker::Notify_set_result(uint8_t wg_id, uint8_t pts)
+int Worker::Notify_set_result(uint8_t winner_id, uint8_t pts)
 {
     FrameType_t ft = SET_RESULT_NOTIF;
     size_t buf_len = sizeof(FrameHead_t) + 2;
@@ -337,6 +344,7 @@ void* worker_func(void* arg)
             //sock_write is reliable 
             int nw = sock_write(fd, pw->mp_wbuf, wsz);
             memset(pw->mp_wbuf, 0, BUF_LENGTH);
+            pw->Clear_writing();
             pw->Clear_writable();
         }
         if (FD_ISSET(fd, p_rset)) {
@@ -358,6 +366,7 @@ void* worker_func(void* arg)
             nr = sock_read(fd, payload, data_len);
             if (nr != data_len)
                 exit(READ_INCOMPLETE);
+            //TODO: CRC check
 
             switch(ft) {
                 case DISPATCH_CARD_ACK:
@@ -380,10 +389,10 @@ void* worker_func(void* arg)
                         Card prime(payload[0]); 
                         int ret = pm->Set_prime_card(prime, data_len);
                         if (ret == 0){
-                            Ack_prime_claim(ack_tag);
-                            Bcast_prime_claim(prime, data_len);
+                            pw->Ack_prime_claim(ack_tag);
+                            pw->Bcast_prime_claim(prime, data_len);
                         } else {
-                            Nack_prime_claim(ack_tag);
+                            pw->Nack_prime_claim(ack_tag);
                         }
                         break;
                     }
@@ -406,11 +415,17 @@ void* worker_func(void* arg)
                 case SWAP_CARD_NOTIF_ACK:
                     {
                         //TODO: Add state check for MainWorker
-                        if (pw->Is_valid_ack(ack_tag)) 
+                        if (pw->Is_valid_ack(ack_tag)) {
                             pw->Set_ready_for_swap_card();
+                            pm->Set_next_ready();
+                        }
                         //TODO: It may trigger sending starting count down 
                         //counter in other players
                         break;
+                    }
+                    //TODO: Add processing for NACKs for other package
+                case SWAP_CARD_SVR_ACK:
+                    {
                     }
                 case SWAP_CARD_DATA:
                     {
@@ -442,17 +457,19 @@ void* worker_func(void* arg)
                     }
                 case SND_CARD_DATA:
                     {
+                        //TODO
                         if (! pw->Is_ready_for_card() ) {
                             //TODO: Log sth
                             break;
                         }
                         CardSet snd_cards(payload, data_len);
+                        // Directly call Mainwoker's function
                         if (pm->Is_valid_snd(id, snd_cards)){
                             pm->Update_card_set(id, snd_cards);
                             pw->Ack_snd_card_data(ack_tag);
                             pw->Bcast_snd_card(snd_cards);
-                            pm->Set_next_ready();
                             pw->Clear_ready_for_card();
+                            pm->Set_next_ready();
                         } else {
                             pw->Nack_snd_card_data(ack_tag);
                             pw->Bcast_inval_snd_card(snd_cards);
@@ -463,16 +480,12 @@ void* worker_func(void* arg)
                     }
                 case ROUND_RESULT_NOTIF_ACK:
                     {
-                        pm->Set_record_bcast_flag(id);
-                        if (/* All workers are bcasted*/)
-                            pm->Set_next_ready();
+                        pm->Set_next_ready();
                         break;
                     }
                 case SET_RESULT_NOTIF_ACK:
                     {
-                        pm->Set_record_bcast_flag(id);
-                        if (/* All workers are bcasted*/)
-                            pm->Set_next_ready();
+                        pm->Set_next_ready();
                         break;
                     }
                 default:

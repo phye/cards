@@ -31,11 +31,13 @@ public:
 public:
     //APIs For MainWorker 
     int Dispatch_card(const Card&);
+    int Notify_prime(const Card&);
     int Notify_banker();
     int Notify_card_swap();
+    int Send_swap_card(const CardSet&);     //TODO
     int Notify_card_send();
     int Notify_round_result(uint8_t winner_id, uint8_t pts);
-    int Notify_set_result(uint8_t wg_id, uint8_t pts);
+    int Notify_set_result(uint8_t winner_id, uint8_t pts);
 
     //APIs for Worker
     int Ack_prime_claim(uint16_t ack_tag);
@@ -55,10 +57,13 @@ private:
     const Worker& operator= (const Worker&);
 
 private:
-    void Set_writable();
+    void Set_writable() { FD_SET(mi_sock_fd, &m_wset) }
     void Clear_writable() { FD_CLR(mi_sock_fd, &m_wset); }
     void Set_readable() { FD_SET(mi_sock_fd, &m_rset); }
     void Clear_readable() { FD_CLR(mi_sock_fd, &m_rset); }
+    inline int Check_and_set_writing();  //atomic check and set writing
+    inline int Clear_writing();
+
     void Set_worker_flag(int worker_id);
     //Clear all worker_flag except self
     void Clear_worker_flag();   
@@ -91,7 +96,9 @@ private:
     char* mp_worker_flag;
     bool mb_ready_for_swap_card;
     bool mb_ready_for_card;
+    bool mb_is_writing;
     pthread_t m_thread;
+    pthread_mutex_t m_mtx;
 
 private:
     uint8_t* mp_rbuf;
