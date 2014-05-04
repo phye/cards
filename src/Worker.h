@@ -4,6 +4,7 @@
 #include <sys/select.h>
 #include <pthread.h>
 #include <stdint.h>
+
 #include "MainWorker.h"
 #include "error.h"
 #include "Card.h"
@@ -31,10 +32,10 @@ public:
 public:
     //APIs For MainWorker 
     int Dispatch_card(const Card&);
-    int Notify_prime(const Card&);
+    int Send_cards_to_swap(const CardSet&);    
+    int Notify_prime(const Card&);              
     int Notify_banker();
     int Notify_card_swap();
-    int Send_swap_card(const CardSet&);     //TODO
     int Notify_card_send();
     int Notify_round_result(uint8_t winner_id, uint8_t pts);
     int Notify_set_result(uint8_t winner_id, uint8_t pts);
@@ -57,7 +58,7 @@ private:
     const Worker& operator= (const Worker&);
 
 private:
-    void Set_writable() { FD_SET(mi_sock_fd, &m_wset) }
+    void Set_writable() { FD_SET(mi_sock_fd, &m_wset); }
     void Clear_writable() { FD_CLR(mi_sock_fd, &m_wset); }
     void Set_readable() { FD_SET(mi_sock_fd, &m_rset); }
     void Clear_readable() { FD_CLR(mi_sock_fd, &m_rset); }

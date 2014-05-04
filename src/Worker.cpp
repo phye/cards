@@ -64,9 +64,10 @@ int Worker::Clear_writing()
 
 void Worker::Set_worker_flag(int worker_id)
 {
-    Worker* worker = mp_main_worker->Get_worker(worker_id);
+    Worker* pw = mp_main_worker->Get_worker(worker_id);
     //FIXME, public/private is class concept
-    worker->mp_worker_flag[mi_worker_id] = 1;
+    //No need to add lock here
+    pw->mp_worker_flag[mi_worker_id] = 1;
 }
 
 void Worker::Clear_worker_flag()
@@ -123,11 +124,12 @@ bool Worker::Bcast_to_others(void* buf, int sz)
             continue;
         Send_buf(i, buf, sz);
     }
-    
+
     while ( !Is_worker_flag_all_set() ) {
         if (sec == mi_time_out)
             exit(BCAST_BUF_TIMEOUT);
-        sleep(1);
+        //TODO: Sleep too long
+        //sleep for 20 ms maybe enough
         sec ++;
     }
 
@@ -177,6 +179,38 @@ int Worker::Dispatch_card(const Card& card)
 
     //TODO: Card.Get_char();
     buf[sizeof(FrameHead_t)] = card.Get_char();
+    Build_header(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+    return 0;
+}
+
+int Worker::Send_cards_to_swap(const CardSet& cs)
+{
+    FrameType_t ft = SWAP_CARD_DATA_SVR;
+    size_t buf_len = sizeof(FrameHead_t) + cs.Size();
+    uint8_t* buf = new uint8_t [buf_len];
+    uint8_t* payload = buf + sizeof(FrameHead_t);
+    
+    cs.Get_char_array(payload, buf_len - sizeof(FrameHead_t));
+
+    Build_header(ft, 0, buf, buf_len);  //My chest hurt at 22:10 04-May-14
+    Send_buf(buf, buf_len);
+    delete [] buf;
+    return 0;
+}
+
+//This function will only be called when nobody claim for prime
+//during dispathing card period, in which we have to decide the
+//prime from bottom cards
+int Worker::Notify_prime(const Card& card)
+{
+    FrameType_t ft = PRIME_NOTIF;
+    size_t buf_len = sizeof(FrameHead_t) + 1;
+    uint8_t* buf = new uint8_t [buf_len];
+
+    buf[sizeof(FrameHead_t)] = card.Get_char();
+
     Build_header(ft, 0, buf, buf_len);
     Send_buf(buf, buf_len);
     delete [] buf;
@@ -303,7 +337,7 @@ int Worker::Bcast_snd_card(const CardSet& cs)
     uint8_t* payload = buf + sizeof(FrameHead_t);
     
     //TODO: Implement CardSet.Get_char_array()
-    cs.Get_char_array(payload, payload-buf);
+    cs.Get_char_array(payload, buf_len-sizeof(FrameHead_t));
 
     Build_header(ft, 0, buf, buf_len);
     Bcast_to_others(buf,buf_len);
