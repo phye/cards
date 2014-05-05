@@ -59,6 +59,7 @@ class ServerMaster{
         Card GetCurrentPrime();
         int  GetBanker(void);
         PLAYSTATE GetCurrentState();
+        Worker* GetWorker(int workerId);
 
         // Setting info
         bool ClaimPrime(CardSet claimingCard, int workerID);
@@ -87,7 +88,7 @@ class ServerMaster{
                              //!!!Server should track this too, considering ShuaiPai, or it may be rejected during broadcast?
         CardSet bottomCards;
         vector<CardSet> cardPlayedInThisRound(MAX_PLAYER_COUNT);//TODO: further consideration: ShuaiPai, how to store and how to compare, card played by one player in this hand
-        vector<Worker> workers(MAX_PLAYER_COUNT);//intialize to proper number of workers
+        vector<Worker*> workers(MAX_PLAYER_COUNT);//intialize to proper number of workers
 
         int playerCount;
         int cardSetCount;

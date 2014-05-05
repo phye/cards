@@ -1,4 +1,5 @@
 #include "ServerMaster.h"
+#include <math.h>
 
 ServerMaster::ServerMaster(int nPlayers = MAX_PLAYER_COUNT, int nCardSets = 2)
 {
@@ -211,26 +212,25 @@ void ServerMaster::WaitForPrime()
         //notify workers
         for(curPlayer = PLAYER_1; curPlayer < playerCount; curPlayer++)
         {
-            workers[curPlayer].NotifyPrime(currentPrime);
-            WaitWorkerSetReady(curPlayer);
+            workers[curPlayer]->NotifyPrime(currentPrime);
         }
+        WaitWorkerSetReady();
     }
     
     for(curPlayer = PLAYER_1; curPlayer < playerCount; curPlayer++)
     {
-        workers[curPlayer].NotifyBanker(banker);
-        WaitWorkerSetReady(curPlayer);
+        workers[curPlayer]->Notify_banker(banker);
     }
-    
+    WaitWorkerSetReady();    
 }
 
 void ServerMaster::ExchangeCard()
 {
     assert(banker == PLAYER_NONE);
 
-    workers[banker].Notify_card_swap();
+    workers[banker]->Notify_card_swap();
     WaitWorkerSetReady(banker);
-    workers[banker].Swap_card(bottomCards);
+    workers[banker]->Swap_card(bottomCards);
 
     cardsInHand[banker].Add_card(bottomCards);//TODO: need to overload this function to accept CardSet
     WaitWorkerSetReady(banker);//banker should first send card then set ready.
@@ -241,10 +241,11 @@ void ServerMaster::ExchangeCard()
 void ServerMaster::PlayOneRound()
 {
     PLAYERNAME curPlayer = firstPlayer;
+    cardPlayedInThisRound.clear();
     
     do
     {
-        workers[curPlayer].Notify_card_send();
+        workers[curPlayer]->Notify_card_send();
         WaitWorkerSetReady(curPlayer);
 
         curPlayer = (curPlayer + 1) % playerCount;
@@ -273,12 +274,11 @@ void ServerMaster::RecordScore()
 
     for(player = PLAYER_1; player < playerCount; player++)
     {
-        workers[player].Notify_round_result(winner, tempScore);//Only notify the score for this round
+        workers[player]->Notify_round_result(winner, tempScore);//Only notify the score for this round
         WaitWorkerSetReady(player);
     }
 
     currentRound++;
-    cardPlayedInThisRound[]//TODO: need to clear it
     firstPlayer = winner;
 }
 
@@ -286,17 +286,22 @@ void ServerMaster::SetEnd()
 {
     int idx;
     PLAYER_NAME setWinner;
+    int bottomScore = 0;
 
-    //TODO: first calculate scores in bottom card
+    // first calculate scores in bottom card
+    if ((firstPlayer != banker) && (firstPlayer != (banker + 2) % MAX_PLAYER_COUNT))
+    {
+        bottomScore = bottomCards.GetScore() * pow(2,(cardPlayedInThisRound[firstPlayer].Size() - 1)));
+    }
     
-    //calculate new level and set new banker
+    // calculate new level and set new banker
     if ((PLAYER_1 == banker) || (PLAYER_3 == banker))
     {
         if (playerScore[1] >= 80)
         {
-            //turn over
+            // turn over
             banker = (banker + 1) % MAX_PLAYER_COUNT;
-            playingLevel[1] += (playerScore[1] - 80) / levelGap;
+            playingLevel[1] += (playerScore[1] + bottomScore - 80) / levelGap;
         }
         else
         {
@@ -308,9 +313,9 @@ void ServerMaster::SetEnd()
     {
         if (playerScore[0] >= 80)
         {
-            //turn over
+            // turn over
             banker = (banker + 1) % MAX_PLAYER_COUNT;
-            playingLevel[0] += (playerScore[0] - 80) / levelGap;
+            playingLevel[0] += (playerScore[0] + bottomScore - 80) / levelGap;
         }
         else
         {
@@ -326,20 +331,20 @@ void ServerMaster::SetEnd()
 
     for(idx = PLAYER_1; idx < playerCount; idx++)
     {
-        workers[idx].Notify_set_result(banker, playerScore);//The new banker is the winner of this set
-        WaitWorkerSetReady(idx);
+        workers[idx]->Notify_set_result(banker, playerScore);//The new banker is the winner of this set
     }
+    WaitWorkerSetReady();
 }
 
 void ServerMaster::GameEnd()
 {
-    //TODO: notify the worker, Show the game result, wait ready
+    // notify the worker, Show the game result, wait ready
     int idx;
     for(idx = PLAYER_1; idx < playerCount; idx++)
     {
-        workers[idx].Notify_game_result(playerScore);
-        WaitWorkerSetReady(idx);
+        workers[idx]->Notify_game_result(playerScore);
     }
+    WaitWorkerSetReady();
     
     //exit program or start another game by user's choice
     bool playAgain;
@@ -394,12 +399,21 @@ PLAYSTATE ServerMaster::GetCurrentState()
     return currentState;
 }
 
+Worker* ServerMaster::GetWorker(int workerId)
+{
+    return workers[workerId];
+}
 bool ServerMaster::ClaimPrime(CardSet claimingCard, int workerID)
 {
     // This function is so ugly
     bool isDoubleClaim;
 
     if (claimingCard.Size() > 2)
+    {
+        return FALSE;
+    }
+    
+    if ((2 == claimingCard.Size()) && claimingCard.)//test if it is a valid double claim, need an new interface
     {
         return FALSE;
     }
@@ -428,6 +442,7 @@ bool ServerMaster::ClaimPrime(CardSet claimingCard, int workerID)
                 {
                     banker = workerID;
                 }
+                //TODO: can wake up the sever master now, but how to wake up?
                 return TRUE;
             }
         }
@@ -474,35 +489,19 @@ void ServerMaster::ReturnBottomCard(CardSet returnedCard)
 // Note: The client should make sure that the played cardset obeys basic rules
 bool ServerMaster::IsValidSend(int workerId, CardSet cards)
 {
-    if(!SanityCheck(cards))
+    if(!SanityCheck(cards, workerId))
     {
         return FALSE;
     }
     
-    if(1 == cards.Size())
+    if((1 != cards.Size()) && (workerId == firstPlayer))
     {
-        if(workerId == firstPlayer)
-        {
-            return TRUE;
-        }
-        else 
-        {
-            if(cards.Color() == cardPlayedInThisRound[firstPlayer].Color())
-            {
-                return TRUE;
-            }
-            else
-            {
-                return FALSE;
-            }
-        }
+        //Shuai Pai
+        
     }
     else
     {
-        if(workerId == firstPlayer)
-        {
-            //ToDo: Fix this ShuaiPai validation
-        }
+        return TRUE;
     }
 }
 
@@ -541,8 +540,22 @@ bool ServerMaster::IsLastRound()
     return (cardsInHand[banker]->GetCardCount() == 0);
 }
 
-bool ServerMaster::SanityCheck(CardSet cards)
+bool ServerMaster::SanityCheck(CardSet cards, int workerId)
 {
     //TODO: need to complete this
-    return TRUE;
+    // TODO: no need to finish this, since client should do this sanity check
+    if(cards.IsSameColor())
+    {
+        return TRUE;
+    }
+    else
+    {
+        return TRUE;
+        if(workerId == firstPlayer)
+        {
+        }
+        else
+        {
+        }
+    }
 }
