@@ -34,7 +34,7 @@ public:
     int Dispatch_card(const Card&);
     int Send_cards_to_swap(const CardSet&);    
     int Notify_prime(const Card&);              
-    int Notify_banker();
+    int Notify_banker(int banker_id);
     int Notify_card_swap();
     int Notify_card_send();
     int Notify_round_result(uint8_t winner_id, uint8_t pts);

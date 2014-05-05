@@ -192,6 +192,7 @@ int Worker::Send_cards_to_swap(const CardSet& cs)
     uint8_t* buf = new uint8_t [buf_len];
     uint8_t* payload = buf + sizeof(FrameHead_t);
     
+    //TODO: CardSet.Get_char_array();
     cs.Get_char_array(payload, buf_len - sizeof(FrameHead_t));
 
     Build_header(ft, 0, buf, buf_len);  //My chest hurt at 22:10 04-May-14
@@ -217,6 +218,20 @@ int Worker::Notify_prime(const Card& card)
     return 0;
 }
 
+int Worker::Notify_banker(int banker_id)
+{
+    FrameType_t ft = BANKER_NOTIF;
+    size_t buf_len = sizeof(FrameHead_t) + 1;
+    uint8_t* buf = new uint8_t [buf_len];
+
+    buf[sizeof(FrameHead_t)] = banker_id;
+
+    Build_header(ft, 0, buf, buf_len);
+    Send_buf(buf, buf_len);
+    delete [] buf;
+    return 0;
+}
+
 int Worker::Notify_helper(FrameHead_t ft)
 {
     size_t buf_len = sizeof(FrameHead_t);
@@ -228,16 +243,9 @@ int Worker::Notify_helper(FrameHead_t ft)
     return 0;
 }
 
-int Worker::Notify_banker()
-{
-    //TODO: Should notify other workers who's banker
-    return Notify_helper(BANKER_NOTIF);
-}
-
 //FIXME: This function may not be necessary
 int Worker::Notify_card_swap()
 {
-    //TODO: Server should send card first
     return Notify_helper(SWAP_CARD_NOTIF);
 }
 
@@ -405,14 +413,19 @@ void* worker_func(void* arg)
             switch(ft) {
                 case DISPATCH_CARD_ACK:
                     {
-                        //TODO: Add state check for MainWorker
-                        if( pw->Is_valid_ack(ack_tag) )
-                            pm->Set_next_ready();
+                        if (pm->GetCurrentState() != DISPATCHING_CARDS)
+                            //TODO: Log sth
+                            break;
+                        if (pw->Is_valid_ack(ack_tag))
+                            pm->Set_next_ready(id);
                         break;
                     }
                 case CLAIM_PRIME:
                     {
-                        //TODO: Add state check for MainWorker
+                        if (pm->GetCurrentState() != DISPATCHING_CARDS &&
+                                pm->GetCurrentState() != WAITING_PRIME)
+                            //TODO: Log sth
+                            break;
                         if (data_len > 2) 
                             break;
                         else if (data_len == 2) {
@@ -432,38 +445,60 @@ void* worker_func(void* arg)
                     }
                 case CLAIM_PRIME_BCAST_ACK:
                     {
-                        //TODO: Add state check for MainWorker
+                        if (pm->GetCurrentState() != DISPATCHING_CARDS &&
+                                pm->GetCurrentState() != WAITING_PRIME)
+                            //TODO: Log sth
+                            break;
                         //TODO: need to add validity check for BCAST_ACK
                         int snd_id = pw->rbuf[offsetof(FrameHead_t, frm_src)];
                         pm->Get_worker(snd_id)->Set_worker_flag(id);
                         break;
                     }
+                case PRIME_NOTIF_ACK:
+                    {
+                        if (pm->GetCurrentState() != WAITING_PRIME)
+                            //TODO: Log sth
+                            break;
+                        if (pw->Is_valid_ack(ack_tag)) {
+                            pm->Set_next_ready(id);
+                        }
+                        break;
+                    }
                 case BANKER_NOTIF_ACK:
                     {
-                        //FIXME: Is BANKER_NOTIF_ACK redundent? 
-                        //Maybe SWAP_CARD_NOTIF is enough
-                        
-                        //Currently do nothing
+                        if (pm->GetCurrentState() != WAITING_PRIME)
+                            //TODO: Log sth
+                            break;
+                        if (pw->Is_valid_ack(ack_tag)) {
+                            pm->Set_next_ready(id);
+                        }
                         break;
                     }
                 case SWAP_CARD_NOTIF_ACK:
                     {
-                        //TODO: Add state check for MainWorker
+                        if (pm->GetCurrentState() != CHANGE_CARD)
+                            //TODO: Log sth
+                            break;
                         if (pw->Is_valid_ack(ack_tag)) {
-                            pw->Set_ready_for_swap_card();
-                            pm->Set_next_ready();
+                            pm->Set_next_ready(id);
                         }
-                        //TODO: It may trigger sending starting count down 
-                        //counter in other players
                         break;
                     }
-                    //TODO: Add processing for NACKs for other package
                 case SWAP_CARD_SVR_ACK:
                     {
+                        if (pm->GetCurrentState() != CHANGE_CARD)
+                            //TODO: Log sth
+                            break;
+                        if (pw->Is_valid_ack(ack_tag)) {
+                            pw->Set_ready_for_swap_card();
+                        }
+                        break;
                     }
                 case SWAP_CARD_DATA:
                     {
-                        //TODO: Add state check for MainWorker
+                        if (pm->GetCurrentState() != CHANGE_CARD)
+                            //TODO: Log sth
+                            break;
                         if(! pw->Is_ready_for_swap_card()){
                             //TODO: Log sth
                             break;
@@ -472,8 +507,8 @@ void* worker_func(void* arg)
                             CardSet base_cards(payload, data_len);
                             pw->Ack_swap_card_data(ack_tag);
                             pm->Set_base_cards(base_cards);
-                            pm->Set_next_ready();
                             pw->Clear_ready_for_swap_card();
+                            pm->Set_next_ready(id);
                         }
                         else {
                             //TODO, add some error handling and log sth
@@ -482,7 +517,9 @@ void* worker_func(void* arg)
                     }
                 case SND_CARD_NOTIF_ACK:
                     {
-                        //TODO: Add state check for MainWorker
+                        if (pm->GetCurrentState() != PLAYING) 
+                            //TODO: Log sth
+                            break;
                         if (pw->Is_valid_ack(ack_tag))
                             pw->Set_ready_for_card();
                         //TODO: it may trigger sending starting count down 
@@ -491,7 +528,9 @@ void* worker_func(void* arg)
                     }
                 case SND_CARD_DATA:
                     {
-                        //TODO
+                        if (pm->GetCurrentState() != PLAYING) 
+                            //TODO: Log sth
+                            break;
                         if (! pw->Is_ready_for_card() ) {
                             //TODO: Log sth
                             break;
@@ -503,7 +542,7 @@ void* worker_func(void* arg)
                             pw->Ack_snd_card_data(ack_tag);
                             pw->Bcast_snd_card(snd_cards);
                             pw->Clear_ready_for_card();
-                            pm->Set_next_ready();
+                            pm->Set_next_ready(id);
                         } else {
                             pw->Nack_snd_card_data(ack_tag);
                             pw->Bcast_inval_snd_card(snd_cards);
@@ -514,11 +553,17 @@ void* worker_func(void* arg)
                     }
                 case ROUND_RESULT_NOTIF_ACK:
                     {
-                        pm->Set_next_ready();
+                        if (pm->GetCurrentState() != RECORD_SCORE)
+                            //TODO: Log sth
+                            break;
+                        pm->Set_next_ready(id);
                         break;
                     }
                 case SET_RESULT_NOTIF_ACK:
                     {
+                        if (pm->GetCurrentState() != SET_END)
+                            //TODO: Log sth
+                            break;
                         pm->Set_next_ready();
                         break;
                     }
