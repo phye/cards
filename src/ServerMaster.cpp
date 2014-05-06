@@ -228,6 +228,13 @@ void ServerMaster::ExchangeCard()
 {
     assert(banker == PLAYER_NONE);
 
+    // mark prime in cardset
+    for(PLAYERNAME player = PLAYER_1; player < MAX_PLAYER_COUNT; player++)
+    {
+        cardsInHand[player].SetPrime(currentPrime);
+        cardPlayedInThisRound[player].SetPrime(currentPrime);
+    }
+    
     workers[banker]->Notify_card_swap();
     WaitWorkerSetReady(banker);
     workers[banker]->Swap_card(bottomCards);
@@ -413,11 +420,6 @@ bool ServerMaster::ClaimPrime(CardSet claimingCard, int workerID)
         return FALSE;
     }
     
-    if ((2 == claimingCard.Size()) && claimingCard.)//test if it is a valid double claim, need an new interface
-    {
-        return FALSE;
-    }
-    
     isDoubleClaim = (2 == claimingCard.Size()) ? TRUE : FALSE;
     
     if(CARD_INVALID_VAL == currentPrime)
@@ -489,6 +491,8 @@ void ServerMaster::ReturnBottomCard(CardSet returnedCard)
 // Note: The client should make sure that the played cardset obeys basic rules
 bool ServerMaster::IsValidSend(int workerId, CardSet cards)
 {
+    CardSet diamondCards, clubCards, heartCards, spadeCards, primeCards, temp;
+    int player;
     if(!SanityCheck(cards, workerId))
     {
         return FALSE;
@@ -497,7 +501,46 @@ bool ServerMaster::IsValidSend(int workerId, CardSet cards)
     if((1 != cards.Size()) && (workerId == firstPlayer))
     {
         //Shuai Pai
-        
+        cards.GetMinDiamond(diamondCards);
+        cards.GetMinClub(clubCards);
+        cards.GetMinHeart(heartCards);
+        cards.GetMinSpade(spadeCards);
+        cards.GetMinPrime(primeCards);
+        player = (workerId + 1) % MAX_PLAYER_COUNT;
+        do
+        {
+            cardsInHand[player].GetDiamond(temp);
+            if(diamondCards.Size() && diamondCards < temp)
+            {
+                return FALSE;
+            }
+
+            cardsInHand[player].GetClub(temp);
+            if(clubCards.Size() && clubCards < temp)
+            {
+                return FALSE;
+            }
+
+            cardsInHand[player].GetHeart(temp);
+            if(heartCards.Size() && heartCards < temp)
+            {
+                return FALSE;
+            }
+
+            cardsInHand[player].GetSpade(temp);
+            if(spadeCards.Size() && spadeCards < temp)
+            {
+                return FALSE;
+            }
+
+            cardsInHand[player].GetPrime(temp);
+            if(primeCards.Size() && primeCards < temp)
+            {
+                return FALSE;
+            }
+
+            player = (player + 1) % MAX_PLAYER_COUNT;
+        }while(player != workerId);
     }
     else
     {
