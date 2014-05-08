@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <map>
+#include <stdint.h>
 #include "error.h"
 
 using std::map;
@@ -20,8 +21,7 @@ enum card_suit_t {
     BJOKER,     //black-white Joker
     CJOKER,      //colorful Joker :)
 };
-typedef char card_val_t;
-typedef bool card_state_t; 
+typedef uint8_t card_val_t;
 
 class Card {
 public:
@@ -31,18 +31,15 @@ public:
     static map<const card_val_t, const char*> create_vs_map(void);
 
 public:
-    Card(card_suit_t suit=CARD_INVALID_SUIT, card_val_t value=0,card_state_t state=0 )
-        : card_suit(suit), card_val(value), card_state(state) {}
+    Card(card_suit_t suit=CARD_INVALID_SUIT, card_val_t value=0)
+        : card_suit(suit), card_val(value) {}
+    //First 4 bit for suit, last 4 bit for val
+    explicit Card(const uint8_t pair);
     ~Card() {}
 
     const card_suit_t Get_suit() const { return card_suit; }
     const card_val_t  Get_val() const { return card_val; }
-    const card_state_t Get_state() const { return card_state; }
-
-    bool Is_good() const;
-
-    //A card's suit and val should not be changed
-    void Set_state(card_state_t state ) { card_state = state; }
+    inline const uint8_t Get_char() const;
 
     friend bool operator== (const Card& lhs, const Card& rhs);
     friend bool lt_by_suit(const Card& lhs, const Card& rhs);
@@ -50,8 +47,10 @@ public:
     friend ostream& operator<< (ostream& os, const Card& rhs);
 
 private:
+    inline bool Is_valid(const card_suit_t st, const card_val val) const;
+
+private:
     const card_suit_t     card_suit;
     const card_val_t      card_val;     //card value
-    card_state_t    card_state;   // 1 for on, can be seen by all people
 };
 #endif

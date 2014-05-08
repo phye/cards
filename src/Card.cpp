@@ -1,9 +1,11 @@
-#include "Card.h"
 #include <iostream>
 #include <map>
+#include <stdexcept>
+#include "Card.h"
 using std::map;
 using std::ostream;
 using std::endl;
+using std::runtime_error;
 
 map<const card_suit_t, const char*> Card::create_ss_map(void)
 {
@@ -40,15 +42,40 @@ map<const card_val_t, const char*> Card::create_vs_map(void)
 const map<const card_suit_t, const char*> Card::suit_str_map = Card::create_ss_map();
 const map<const card_val_t, const char*> Card::val_str_map = Card::create_vs_map();
 
-bool Card::Is_good() const
+Card::Card(card_suit_t suit, card_val_t value)
 {
-    if(card_val == CARD_MAX_VAL)
-        if(card_suit == BJOKER || card_suit == CJOKER)
-            return true;
-        else
-            return false;
-    else
-        return !( card_suit == CARD_INVALID_SUIT || card_val < CARD_MIN_VAL || card_val > CARD_MAX_VAL-1 );
+    if (!Is_valid(suit, value))
+        throw runtime_error("Invalid suit or value for a card");
+    card_suit = suit;
+    card_val = value;
+}
+
+Card::Card(const char pair)
+{
+    card_suit_t st = ( pair & 0xF0) >> 4;
+    card_val_t val = ( pair & 0x0F);
+
+    if (!Is_valid(suit, value))
+        throw runtime_error("Invalid suit or value for a card");
+    card_suit = suit;
+    card_val = value;
+}
+
+const uint8_t Get_char()
+{
+    uint8_t ret = card_val & 0x0F;
+    ret &= ((card_suit<<4) & 0xF0);
+    return ret;
+}
+
+bool Card::Is_valid(const card_suit_t st, const card_val_t val) const
+{
+    if (val == CARD_MAX_VAL)
+        return (st == BJOKER || st == CJOKER);
+    else if (val>= CARD_MIN_VAL && val < CARD_MAX_VAL)
+        return ( st>= DIAMOND && st< BJOKER);
+    else 
+        return false;
 }
 
 bool operator== (const Card& lhs, const Card& rhs)

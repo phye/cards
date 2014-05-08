@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <stdint.h>
 
-#include "MainWorker.h"
+#include "ServerMaster.h"
 #include "error.h"
 #include "Card.h"
 #include "CardSet.h"
@@ -14,11 +14,11 @@
 #define BUF_LENGTH 50
 #define BASE_CARD_NUM 8
 
-class MainWorker;
+class ServerMaster;
 
 class Worker{
 public:
-    Worker(int id = -1, int np = 0, int sfd = 0, int timeout =10, MainWorker* mw = NULL);
+    Worker(int id = -1, int np = 0, int sfd = 0, int timeout =10, ServerMaster* mw = NULL);
     ~Worker();
 
 public: 
@@ -26,7 +26,7 @@ public:
     int Get_num_players() { return mi_num_players; }
     int Get_sock_fd() { return mi_sock_fd; }
     int Get_time_out() { return mi_time_out; }
-    MainWorker* Get_main_worker() { return mp_main_worker; }
+    ServerMaster* Get_main_worker() { return mp_main_worker; }
     void Set_time_out(int timeout) { mi_time_out = timeout; }
 
 public:
@@ -93,7 +93,7 @@ private:
     int mi_num_players;
     int mi_sock_fd;
     int mi_time_out;
-    MainWorker* mp_main_worker;
+    ServerMaster* mp_main_worker;
     char* mp_worker_flag;
     bool mb_ready_for_swap_card;
     bool mb_ready_for_card;

@@ -3,12 +3,12 @@
 
 #include <set>
 #include "Card.h"
+#include "CardComp.h"
 
 using std::multiset;
 
 class CardSet {
 public:
-    typedef bool (* Less) (const Card& lhs, const Card& rhs);
 public:
     CardSet(int num=1); 
     ~CardSet();
@@ -25,9 +25,8 @@ private:
     CardSet& operator= (const CardSet &); //Forbidden assignment
 
 private:
-    multiset<Card, Less>* card_set;
+    multiset<Card, CardComp>* card_set;
     int num_of_card_set;
 };
 
 #endif
-

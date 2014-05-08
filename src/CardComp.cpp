@@ -22,7 +22,6 @@ const char CardComp::suit_matrix_normal[5][6] = {
 
 bool CardComp::Is_prime(const Card& cd)
 {
-    assert(cd.Is_good());
     if( suit_matrix_normal[prime_suit-1][cd.Get_suit()-1] >= 4 )
         return true;
     else
@@ -93,5 +92,4 @@ bool CardComp::operator() (const Card& lhs, const Card& rhs)
         return true;
     else 
         return false;
-
 }

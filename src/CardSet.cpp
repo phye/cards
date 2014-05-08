@@ -4,6 +4,7 @@
 #include <map>
 #include "CardSet.h"
 #include "Card.h"
+#include "CardComp.h"
 
 using std::multiset;
 using std::ofstream;

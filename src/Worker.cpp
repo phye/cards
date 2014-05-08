@@ -8,7 +8,7 @@
 #include "Card.h"
 #include "Util.h"
 
-Worker::Worker(int id, int np, int sfd, int timeout, MainWorker* mw) 
+Worker::Worker(int id, int np, int sfd, int timeout, ServerMaster* mw) 
     : mi_worker_id(id), mi_num_players(np), mi_sock_fd(sfd),
       mi_time_out(timeout), mp_main_worker(mw)
 {
@@ -57,7 +57,7 @@ int Worker::Check_and_set_writing()
 
 int Worker::Clear_writing()
 {
-    //FIXME: Should I add mutex here?
+    //FIXME: Should I add mutex here? Seems no need
     mb_is_writing = false;
     return 0;
 }
@@ -65,7 +65,6 @@ int Worker::Clear_writing()
 void Worker::Set_worker_flag(int worker_id)
 {
     Worker* pw = mp_main_worker->Get_worker(worker_id);
-    //FIXME, public/private is class concept
     //No need to add lock here
     pw->mp_worker_flag[mi_worker_id] = 1;
 }
@@ -370,7 +369,7 @@ int Worker::Bcast_inval_snd_card(const CardSet& cs)
 void* worker_func(void* arg)
 {
     Worker* pw= (Worker*) arg;
-    MainWorker* pm = pw->Get_main_worker();
+    ServerMaster* pm = pw->Get_main_worker();
     int id = pw->Get_worker_id();
     int fd = pw->Get_sock_fd();
     struct timeval sel_tmout;
@@ -417,7 +416,7 @@ void* worker_func(void* arg)
                             //TODO: Log sth
                             break;
                         if (pw->Is_valid_ack(ack_tag))
-                            pm->Set_next_ready(id);
+                            pm->SetNextReady(id);
                         break;
                     }
                 case CLAIM_PRIME:
@@ -460,7 +459,7 @@ void* worker_func(void* arg)
                             //TODO: Log sth
                             break;
                         if (pw->Is_valid_ack(ack_tag)) {
-                            pm->Set_next_ready(id);
+                            pm->SetNextReady(id);
                         }
                         break;
                     }
@@ -470,7 +469,7 @@ void* worker_func(void* arg)
                             //TODO: Log sth
                             break;
                         if (pw->Is_valid_ack(ack_tag)) {
-                            pm->Set_next_ready(id);
+                            pm->SetNextReady(id);
                         }
                         break;
                     }
@@ -480,7 +479,7 @@ void* worker_func(void* arg)
                             //TODO: Log sth
                             break;
                         if (pw->Is_valid_ack(ack_tag)) {
-                            pm->Set_next_ready(id);
+                            pm->SetNextReady(id);
                         }
                         break;
                     }
@@ -508,7 +507,7 @@ void* worker_func(void* arg)
                             pw->Ack_swap_card_data(ack_tag);
                             pm->Set_base_cards(base_cards);
                             pw->Clear_ready_for_swap_card();
-                            pm->Set_next_ready(id);
+                            pm->SetNextReady(id);
                         }
                         else {
                             //TODO, add some error handling and log sth
@@ -542,7 +541,7 @@ void* worker_func(void* arg)
                             pw->Ack_snd_card_data(ack_tag);
                             pw->Bcast_snd_card(snd_cards);
                             pw->Clear_ready_for_card();
-                            pm->Set_next_ready(id);
+                            pm->SetNextReady(id);
                         } else {
                             pw->Nack_snd_card_data(ack_tag);
                             pw->Bcast_inval_snd_card(snd_cards);
@@ -556,7 +555,7 @@ void* worker_func(void* arg)
                         if (pm->GetCurrentState() != RECORD_SCORE)
                             //TODO: Log sth
                             break;
-                        pm->Set_next_ready(id);
+                        pm->SetNextReady(id);
                         break;
                     }
                 case SET_RESULT_NOTIF_ACK:
@@ -564,7 +563,7 @@ void* worker_func(void* arg)
                         if (pm->GetCurrentState() != SET_END)
                             //TODO: Log sth
                             break;
-                        pm->Set_next_ready();
+                        pm->SetNextReady(id);
                         break;
                     }
                 default:
