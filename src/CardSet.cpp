@@ -16,7 +16,7 @@ extern bool lt_by_suit(const Card&, const Card&);
 CardSet::CardSet(int num)
     : num_of_card_set(num)
 {
-    card_set = new multiset<Card, Less> (lt_by_suit);
+    card_set = new multiset<Card, CardComp> (CardComp());
 }
 
 CardSet::~CardSet()

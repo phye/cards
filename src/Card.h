@@ -31,8 +31,7 @@ public:
     static map<const card_val_t, const char*> create_vs_map(void);
 
 public:
-    Card(card_suit_t suit=CARD_INVALID_SUIT, card_val_t value=0)
-        : card_suit(suit), card_val(value) {}
+    Card(card_suit_t suit=CARD_INVALID_SUIT, card_val_t value=0);
     //First 4 bit for suit, last 4 bit for val
     explicit Card(const uint8_t pair);
     ~Card() {}
@@ -47,10 +46,10 @@ public:
     friend ostream& operator<< (ostream& os, const Card& rhs);
 
 private:
-    inline bool Is_valid(const card_suit_t st, const card_val val) const;
+    inline bool Is_valid(const card_suit_t st, const card_val_t val) const;
 
 private:
-    const card_suit_t     card_suit;
-    const card_val_t      card_val;     //card value
+    card_suit_t     card_suit;
+    card_val_t      card_val;     //card value
 };
 #endif

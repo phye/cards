@@ -18,7 +18,7 @@ public:
     bool Is_empty() const;
     int Size() const { return card_set->size(); }
     void Display() const;
-    void Set_prime(Less lf);
+    void Set_prime(const Card &);
 
 private:
     CardSet(const CardSet& ); //Forbidden copy constructure

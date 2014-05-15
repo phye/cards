@@ -50,10 +50,10 @@ Card::Card(card_suit_t suit, card_val_t value)
     card_val = value;
 }
 
-Card::Card(const char pair)
+Card::Card(const uint8_t pair)
 {
-    card_suit_t st = ( pair & 0xF0) >> 4;
-    card_val_t val = ( pair & 0x0F);
+    card_suit_t suit = (card_suit_t) (( pair & 0xF0) >> 4);
+    card_val_t value = (card_val_t) (( pair & 0x0F));
 
     if (!Is_valid(suit, value))
         throw runtime_error("Invalid suit or value for a card");
@@ -61,7 +61,7 @@ Card::Card(const char pair)
     card_val = value;
 }
 
-const uint8_t Get_char()
+const uint8_t Card::Get_char() const
 {
     uint8_t ret = card_val & 0x0F;
     ret &= ((card_suit<<4) & 0xF0);
@@ -101,10 +101,7 @@ bool operator< (const Card& lhs, const Card& rhs)
 //User is responsible for check the validability of card
 ostream& operator<< (ostream& os, const Card& rhs)
 {
-    if ( rhs.Get_state() )
-        os << rhs.suit_str_map.find(rhs.card_suit)->second << ","
-            << rhs.val_str_map.find(rhs.card_val)->second << "\t" ;
-    else
-        os << "##" << "," << "**" << "\t";
+    os << rhs.suit_str_map.find(rhs.card_suit)->second << ","
+        << rhs.val_str_map.find(rhs.card_val)->second << "\t" ;
     return os;
 }

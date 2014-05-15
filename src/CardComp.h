@@ -8,7 +8,7 @@ public:
     static const char suit_matrix_display[5][6];     //Use BJOKER as NT status
     static const char suit_matrix_normal[5][6];
 public:
-    CardComp(card_suit_t cs=CARD_INVALID_SUIT, card_val_t cv=0, bool dp=0) 
+    CardComp(card_suit_t cs=BJOKER, card_val_t cv=0, bool dp=0) 
         : prime_suit(cs), prime_val(cv), display(dp) {}
     ~CardComp() {}
     bool operator() (const Card& lhs, const Card& rhs);
