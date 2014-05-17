@@ -20,7 +20,7 @@ const char CardComp::suit_matrix_normal[5][6] = {
     {1, 1, 1, 1, 5, 6},
 };
 
-bool CardComp::Is_prime(const Card& cd)
+bool CardComp::Is_prime(const Card& cd) const
 {
     if( suit_matrix_normal[prime_suit-1][cd.Get_suit()-1] >= 4 )
         return true;
@@ -28,7 +28,7 @@ bool CardComp::Is_prime(const Card& cd)
         return ( cd.Get_val() == prime_val);
 }
 
-int CardComp::Prime_weight(const Card& cd)
+int CardComp::Prime_weight(const Card& cd) const
 {
     card_val_t val = cd.Get_val();
     if( val == CARD_MAX_VAL ){
@@ -51,7 +51,7 @@ int CardComp::Prime_weight(const Card& cd)
         return 1;
 }
 
-bool CardComp::Less_prime(const Card& lhs, const Card& rhs)
+bool CardComp::Less_prime(const Card& lhs, const Card& rhs) const
 {
     const char* p_arr = (display) ? suit_matrix_display[prime_suit-1] :
         suit_matrix_normal[prime_suit-1];
@@ -69,7 +69,7 @@ bool CardComp::Less_prime(const Card& lhs, const Card& rhs)
     return false;
 }
 
-bool CardComp::Less_nonprime(const Card& lhs, const Card& rhs)
+bool CardComp::Less_nonprime(const Card& lhs, const Card& rhs) const
 {
     const char* p_arr = (display) ? suit_matrix_display[prime_suit-1] :
         suit_matrix_normal[prime_suit-1];
@@ -82,7 +82,7 @@ bool CardComp::Less_nonprime(const Card& lhs, const Card& rhs)
     return false;
 }
 
-bool CardComp::operator() (const Card& lhs, const Card& rhs)
+bool CardComp::operator() (const Card& lhs, const Card& rhs) const
 {
     if( Is_prime(lhs) && Is_prime(rhs) )
         return Less_prime(lhs, rhs);

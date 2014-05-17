@@ -21,7 +21,7 @@ Card_UT: Card_UT.cpp libgtest.a Card.o
 CardComp_UT: CardComp_UT.cpp libgtest.a Card.o CardComp.o
 	$(CXX) $(CPP_FLAGS) $(CXX_FLAGS) $^ -o $@
 
-CardSet_UT: CardSet_UT.cpp libgtest.a CardSet.o Card.o
+CardSet_UT: CardSet_UT.cpp libgtest.a CardSet.o Card.o CardComp.o
 	$(CXX) $(CPP_FLAGS) $(CXX_FLAGS) $^ -o $@
 
 Card.o: $(USER_DIR)/Card.cpp

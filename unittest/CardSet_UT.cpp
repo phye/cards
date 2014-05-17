@@ -1,12 +1,21 @@
 #include "CardSet.h"
 #include "Card.h"
 #include "gtest/gtest.h"
+#include <stdexcept>
+using std::runtime_error;
 
 TEST(CardSet, DefaultConstructor)
 {
     CardSet cs;
     EXPECT_EQ(true, cs.Is_empty());
     EXPECT_EQ(0, cs.Size());
+}
+
+TEST(CardSet, FullCardSet)
+{
+    CardSet cs(2, false, NULL, true);
+    EXPECT_EQ(54*2, cs.Size());
+    cs.Display();
 }
 
 TEST(CardSet, Add_card_And_Del_card)
@@ -44,10 +53,7 @@ TEST(CardSet, Add_card_And_Del_card)
     EXPECT_EQ(false, cs.Is_empty());
     EXPECT_EQ(1, cs.Size());
 
-    Card b;     //Invalid card
-    EXPECT_EQ(false, cs.Add_card(b));
-    EXPECT_EQ(false, cs.Is_empty());
-    EXPECT_EQ(1, cs.Size());
+    EXPECT_THROW(Card b, runtime_error);     //Invalid card
     
     Card c(SPADE, 10);
     EXPECT_EQ(true, cs.Add_card(c));
@@ -57,7 +63,3 @@ TEST(CardSet, Add_card_And_Del_card)
     cs.Display();
 }
 
-TEST(CardSet, Set_prime)
-{
-
-}

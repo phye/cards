@@ -6,9 +6,9 @@
 TEST(CardComp, DefaultConstructor)
 {
     CardComp comp;
-    EXPECT_EQ(CARD_INVALID_SUIT, comp.Get_suit());
-    EXPECT_EQ(0, comp.Get_val());
-    EXPECT_EQ(0, comp.Get_display());
+    EXPECT_EQ(BJOKER, comp.Get_suit());
+    EXPECT_EQ(CARD_MAX_VAL, comp.Get_val());
+    EXPECT_EQ(true, comp.Get_display());
 }
 
 TEST(CardComp, HEARTAsPrime)
@@ -28,7 +28,7 @@ TEST(CardComp, HEARTAsPrime)
     Card cl_13(CLUB, 13);
     Card cl_1(CLUB, 1);
 
-    CardComp Less(HEART,5);
+    CardComp Less(HEART,5,false);
     EXPECT_EQ(true, Less(bjoker, cjoker));
     EXPECT_EQ(true, Less(ht_5, bjoker));
     EXPECT_EQ(true, Less(sp_5, ht_5));

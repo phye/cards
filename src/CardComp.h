@@ -8,25 +8,27 @@ public:
     static const char suit_matrix_display[5][6];     //Use BJOKER as NT status
     static const char suit_matrix_normal[5][6];
 public:
-    CardComp(card_suit_t cs=BJOKER, card_val_t cv=0, bool dp=0) 
+    CardComp(card_suit_t cs=BJOKER, card_val_t cv=CARD_MAX_VAL, bool dp=true) 
         : prime_suit(cs), prime_val(cv), display(dp) {}
+    CardComp(const Card& prime, bool dp=false)
+        : prime_suit(prime.Get_suit()), prime_val(prime.Get_val()), display(dp) {}
     ~CardComp() {}
-    bool operator() (const Card& lhs, const Card& rhs);
-    bool Is_prime(const Card& );
+    bool operator() (const Card& lhs, const Card& rhs) const;
+    bool Is_prime(const Card& ) const;
 
 public:
-    card_suit_t Get_suit() { return prime_suit; }
-    card_val_t Get_val() { return prime_val; }
-    bool Get_display() { return display; }
+    card_suit_t Get_suit() const { return prime_suit; }
+    card_val_t Get_val() const { return prime_val; }
+    bool Get_display() const { return display; }
 
 private:
-    inline int Prime_weight(const Card& cd);
-    bool Less_prime(const Card& lhs, const Card& rhs); //return true if less
-    bool Less_nonprime(const Card& lhs, const Card& rhs);
+    inline int Prime_weight(const Card& cd) const;
+    bool Less_prime(const Card& lhs, const Card& rhs) const; //return true if less
+    bool Less_nonprime(const Card& lhs, const Card& rhs) const;
 
-private:
-    CardComp(const CardComp&);
-    CardComp& operator=(const CardComp &);
+//private:
+//    CardComp(const CardComp&);
+//    CardComp& operator=(const CardComp &);
 
 private:
     const card_suit_t prime_suit;
