@@ -25,13 +25,14 @@ CardSet::CardSet(int num, bool partial, const Card* pcd, bool display)
             for(val=CARD_MIN_VAL; val<CARD_MAX_VAL; val ++)
             {
                 Card sp(SPADE, val);
-                Add_card(sp);
+                card_set->insert(sp);
                 Card ht(HEART, val);
-                Add_card(ht);
+                card_set->insert(ht);
                 Card cl(CLUB, val);
-                Add_card(cl);
+                card_set->insert(cl);
                 Card dm(DIAMOND, val);
-                Add_card(dm);
+                card_set->insert(dm);
+                //Display();
             }
             Card bj(BJOKER, val);
             Add_card(bj);

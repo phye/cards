@@ -13,7 +13,7 @@ TEST(CardSet, DefaultConstructor)
 
 TEST(CardSet, FullCardSet)
 {
-    CardSet cs(2, false, NULL, true);
+    CardSet cs(2, false, NULL, false);
     EXPECT_EQ(54*2, cs.Size());
     cs.Display();
 }
@@ -60,6 +60,6 @@ TEST(CardSet, Add_card_And_Del_card)
     EXPECT_EQ(false, cs.Is_empty());
     EXPECT_EQ(2, cs.Size());
 
-    cs.Display();
+    //cs.Display();
 }
 

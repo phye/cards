@@ -8,10 +8,10 @@ public:
     static const char suit_matrix_display[5][6];     //Use BJOKER as NT status
     static const char suit_matrix_normal[5][6];
 public:
-    CardComp(card_suit_t cs=BJOKER, card_val_t cv=CARD_MAX_VAL, bool dp=true) 
-        : prime_suit(cs), prime_val(cv), display(dp) {}
-    CardComp(const Card& prime, bool dp=false)
-        : prime_suit(prime.Get_suit()), prime_val(prime.Get_val()), display(dp) {}
+    CardComp(card_suit_t cs=BJOKER, card_val_t cv=CARD_MAX_VAL)
+        : prime_suit(cs), prime_val(cv) {}
+    CardComp(const Card& prime)
+        : prime_suit(prime.Get_suit()), prime_val(prime.Get_val()) {}
     ~CardComp() {}
     bool operator() (const Card& lhs, const Card& rhs) const;
     bool Is_prime(const Card& ) const;
@@ -19,7 +19,6 @@ public:
 public:
     card_suit_t Get_suit() const { return prime_suit; }
     card_val_t Get_val() const { return prime_val; }
-    bool Get_display() const { return display; }
 
 private:
     inline int Prime_weight(const Card& cd) const;
@@ -27,13 +26,12 @@ private:
     bool Less_nonprime(const Card& lhs, const Card& rhs) const;
 
 //private:
-//    CardComp(const CardComp&);
+//    CardComp(const CardComp&);  //STL needs copy ctor for functor
 //    CardComp& operator=(const CardComp &);
 
 private:
     const card_suit_t prime_suit;
     const card_val_t prime_val;
-    bool display;   //For display, we may add some special order based on suit
 };
 
 #endif 

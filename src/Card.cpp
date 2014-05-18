@@ -22,20 +22,20 @@ map<const card_suit_t, const char*> Card::create_ss_map(void)
 map<const card_val_t, const char*> Card::create_vs_map(void)
 {
     map<const card_val_t, const char*> vs_map;
-    vs_map[1] = "2";
-    vs_map[2] = "3";
-    vs_map[3] = "4";
-    vs_map[4] = "5";
-    vs_map[5] = "6";
-    vs_map[6] = "7";
-    vs_map[7] = "8";
-    vs_map[8] = "9";
-    vs_map[9] = "10";
-    vs_map[10] = "J";
-    vs_map[11] = "Q";
-    vs_map[12] = "K";
-    vs_map[13] = "A";
-    vs_map[14] = "JOKER";
+    vs_map[CARD_VAL_TWO] = "2";
+    vs_map[CARD_VAL_THREE] = "3";
+    vs_map[CARD_VAL_FOUR] = "4";
+    vs_map[CARD_VAL_FIVE] = "5";
+    vs_map[CARD_VAL_SIX] = "6";
+    vs_map[CARD_VAL_SEVEN] = "7";
+    vs_map[CARD_VAL_EIGHT] = "8";
+    vs_map[CARD_VAL_NINE] = "9";
+    vs_map[CARD_VAL_TEN] = "10";
+    vs_map[CARD_VAL_JOKER] = "J";
+    vs_map[CARD_VAL_QUEEN] = "Q";
+    vs_map[CARD_VAL_KING] = "K";
+    vs_map[CARD_VAL_ACE] = "A";
+    vs_map[CARD_VAL_JOKER] = "JOKER";
     return vs_map;
 }
 
@@ -48,6 +48,7 @@ Card::Card(card_suit_t suit, card_val_t value)
         throw runtime_error("Invalid suit or value for a card");
     card_suit = suit;
     card_val = value;
+    card_order = NOT_PLAYED;
 }
 
 Card::Card(const uint8_t pair)
@@ -59,20 +60,21 @@ Card::Card(const uint8_t pair)
         throw runtime_error("Invalid suit or value for a card");
     card_suit = suit;
     card_val = value;
+    card_order = NOT_PLAYED;
 }
 
 const uint8_t Card::Get_char() const
 {
     uint8_t ret = card_val & 0x0F;
-    ret &= ((card_suit<<4) & 0xF0);
+    ret |= ((card_suit<<4) & 0xF0);
     return ret;
 }
 
 bool Card::Is_valid(const card_suit_t st, const card_val_t val) const
 {
-    if (val == CARD_MAX_VAL)
+    if (val == CARD_VAL_JOKER)
         return (st == BJOKER || st == CJOKER);
-    else if (val>= CARD_MIN_VAL && val < CARD_MAX_VAL)
+    else if (val>= CARD_VAL_TWO && val < CARD_VAL_JOKER)
         return ( st>= DIAMOND && st< BJOKER);
     else 
         return false;

@@ -1,5 +1,9 @@
 #include "CardComp.h"
+#include "Card.h"
 #include <assert.h>
+#include <stdexcept.h>
+
+using std::runtime_error;
 
 //Please also update this matrix if you changed the definition of card_suit_t
 //suit_matrix_display[Primer_suit-1][current_card_suit-1]
@@ -53,33 +57,48 @@ int CardComp::Prime_weight(const Card& cd) const
 
 bool CardComp::Less_prime(const Card& lhs, const Card& rhs) const
 {
-    const char* p_arr = (display) ? suit_matrix_display[prime_suit-1] :
-        suit_matrix_normal[prime_suit-1];
-    assert( (Prime_weight(lhs)>0) && (Prime_weight(rhs) > 0) );
-    if( Prime_weight(lhs) < Prime_weight(rhs) )
-        return true;
-    if( Prime_weight(lhs) == Prime_weight(rhs) )
-    {
-        if( Prime_weight(lhs) > 1 )
-            return (p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1]);
-        else
-            return (lhs.Get_val() < rhs.Get_val());
+    if( !lhs.Get_order() && !rhs.Get_order() ){
+        const char* p_arr = suit_matrix_display[prime_suit-1];
+        assert( (Prime_weight(lhs)>0) && (Prime_weight(rhs) > 0) );
+        if( Prime_weight(lhs) < Prime_weight(rhs) )
+            return true;
+        if( Prime_weight(lhs) == Prime_weight(rhs) )
+        {
+            if( Prime_weight(lhs) > 1 )
+                return (p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1]);
+            else
+                return (lhs.Get_val() < rhs.Get_val());
+        }
+        return false;
     }
-
-    return false;
 }
 
 bool CardComp::Less_nonprime(const Card& lhs, const Card& rhs) const
 {
-    const char* p_arr = (display) ? suit_matrix_display[prime_suit-1] :
-        suit_matrix_normal[prime_suit-1];
-    if( p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1] )
-        return true;
-    if ( p_arr[lhs.Get_suit()-1] == p_arr[rhs.Get_suit()-1] ){
-        if( lhs.Get_suit() == rhs.Get_suit() )
-            return (lhs.Get_val() < rhs.Get_val());
-    }
-    return false;
+    //Card is for display, and not for comparison between players
+    if( !lhs.Get_order() && ! rhs.Get_order() ) {
+        const char* p_arr = suit_matrix_display[prime_suit-1]; 
+        if( p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1] ) 
+            return true;
+        else if( p_arr[lhs.Get_suit()-1] == p_arr[rhs.Get_suit()-1] )
+            //lhs and rhs must be of the same suit
+            return lhs.Get_val() < rhs.Get_val();
+        else
+            return false;
+    } else if( lhs.Get_order() && rhs.Get_order() ) {
+        //Card is for comparison
+        if( lhs.Get_suit() != rhs.Get_suit() )
+            return lhs.Get_order() > rhs.Get_order();
+        else {
+            if( lhs.Get_val() == rhs.Get_val() )
+                return lhs.Get_order() > rhs.Get_order();
+            else 
+                return lhs.Get_val() < rhs.Get_val();
+        }
+    } else if( !lhs.Get_order() && rhs.Get_order() )
+        throw runtime_error("Invalid CardComp: lhs is not played");
+    else
+        throw runtime_error("Invalid CardComp: rhs is not played");
 }
 
 bool CardComp::operator() (const Card& lhs, const Card& rhs) const
