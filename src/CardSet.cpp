@@ -11,32 +11,32 @@ using std::ofstream;
 using std::ios;
 using std::endl;
 
-CardSet::CardSet(int num, bool partial, const Card* pcd, bool display)
+CardSet::CardSet(int num, bool partial, const Card* pcd) 
     : num_of_card_set(num), is_partial(partial)
 {
     if (pcd == NULL)
-        card_set = new multiset<Card, CardComp> (CardComp(BJOKER, CARD_MAX_VAL, display));
+        card_set = new multiset<Card, CardComp> (CardComp(BJOKER, CARD_VAL_JOKER));
     else 
-        card_set = new multiset<Card, CardComp> (CardComp(*pcd, display));
+        card_set = new multiset<Card, CardComp> (CardComp(*pcd));
 
     if (!partial){
         for (int i=0; i< num_of_card_set; i++){
-            card_val_t val;
-            for(val=CARD_MIN_VAL; val<CARD_MAX_VAL; val ++)
+            char val;
+            for(val=CARD_VAL_TWO; val<CARD_VAL_JOKER; val++)
             {
-                Card sp(SPADE, val);
+                Card sp(SPADE, (card_val_t) val);
                 card_set->insert(sp);
-                Card ht(HEART, val);
+                Card ht(HEART, (card_val_t) val);
                 card_set->insert(ht);
-                Card cl(CLUB, val);
+                Card cl(CLUB, (card_val_t) val);
                 card_set->insert(cl);
-                Card dm(DIAMOND, val);
+                Card dm(DIAMOND, (card_val_t) val);
                 card_set->insert(dm);
                 //Display();
             }
-            Card bj(BJOKER, val);
+            Card bj(BJOKER, (card_val_t) val);
             Add_card(bj);
-            Card cj(CJOKER, val);
+            Card cj(CJOKER, (card_val_t) val);
             Add_card(cj);
         }
     }

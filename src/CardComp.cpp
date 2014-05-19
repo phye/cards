@@ -1,7 +1,7 @@
 #include "CardComp.h"
 #include "Card.h"
 #include <assert.h>
-#include <stdexcept.h>
+#include <stdexcept>
 
 using std::runtime_error;
 
@@ -13,7 +13,7 @@ const char CardComp::suit_matrix_display[5][6] = {
     {1, 4, 3, 2, 5, 6},     //Club as prime
     {2, 1, 4, 3, 5, 6},     //Heart as prime
     {1, 2, 3, 4, 5, 6},     //SPADE as prime
-    {1, 1, 1, 1, 5, 6},     //NT as prime
+    {0, 1, 2, 3, 5, 6},     //NT as prime
 };
 
 const char CardComp::suit_matrix_normal[5][6] = {
@@ -35,7 +35,7 @@ bool CardComp::Is_prime(const Card& cd) const
 int CardComp::Prime_weight(const Card& cd) const
 {
     card_val_t val = cd.Get_val();
-    if( val == CARD_MAX_VAL ){
+    if( val == CARD_VAL_JOKER){
         switch (cd.Get_suit()){
             case CJOKER:
                 return 5;
@@ -57,27 +57,41 @@ int CardComp::Prime_weight(const Card& cd) const
 
 bool CardComp::Less_prime(const Card& lhs, const Card& rhs) const
 {
-    if( !lhs.Get_order() && !rhs.Get_order() ){
-        const char* p_arr = suit_matrix_display[prime_suit-1];
-        assert( (Prime_weight(lhs)>0) && (Prime_weight(rhs) > 0) );
-        if( Prime_weight(lhs) < Prime_weight(rhs) )
-            return true;
-        if( Prime_weight(lhs) == Prime_weight(rhs) )
-        {
-            if( Prime_weight(lhs) > 1 )
+    const char* p_arr = suit_matrix_display[prime_suit-1];
+    assert( (Prime_weight(lhs)>=0) && (Prime_weight(rhs) >= 0) );
+    if( Prime_weight(lhs) < Prime_weight(rhs) )
+        return true;
+    else if( Prime_weight(lhs) == Prime_weight(rhs) )
+    {
+        if( !lhs.Get_order() && !rhs.Get_order() ) {
+            if( Prime_weight(lhs) > 1 ) //value is prime
                 return (p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1]);
-            else
+            else 
                 return (lhs.Get_val() < rhs.Get_val());
-        }
+        } else if( lhs.Get_order() && rhs.Get_order() ){
+            if( Prime_weight(lhs) > 1 ) //value is prime
+                return lhs.Get_order() > rhs.Get_order();
+            else { //Normal prime card
+                if (lhs.Get_val() < rhs.Get_val())
+                    return true;
+                else if (lhs.Get_val() == rhs.Get_val())
+                    return lhs.Get_order() > rhs.Get_order();
+                else 
+                    return false;
+            }
+        } else if( !lhs.Get_order() && rhs.Get_order() )
+            throw runtime_error("Invalid CardComp: lhs is not played");
+        else
+            throw runtime_error("Invalid CardComp: rhs is not played");
+    } else
         return false;
-    }
 }
 
 bool CardComp::Less_nonprime(const Card& lhs, const Card& rhs) const
 {
     //Card is for display, and not for comparison between players
+    const char* p_arr = suit_matrix_display[prime_suit-1]; 
     if( !lhs.Get_order() && ! rhs.Get_order() ) {
-        const char* p_arr = suit_matrix_display[prime_suit-1]; 
         if( p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1] ) 
             return true;
         else if( p_arr[lhs.Get_suit()-1] == p_arr[rhs.Get_suit()-1] )
@@ -87,8 +101,12 @@ bool CardComp::Less_nonprime(const Card& lhs, const Card& rhs) const
             return false;
     } else if( lhs.Get_order() && rhs.Get_order() ) {
         //Card is for comparison
-        if( lhs.Get_suit() != rhs.Get_suit() )
-            return lhs.Get_order() > rhs.Get_order();
+        if( lhs.Get_suit() != rhs.Get_suit() ){
+            if (lhs.Get_order() == rhs.Get_order())
+                return p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1];
+            else
+                return lhs.Get_order() > rhs.Get_order();
+        }
         else {
             if( lhs.Get_val() == rhs.Get_val() )
                 return lhs.Get_order() > rhs.Get_order();

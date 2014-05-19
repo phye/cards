@@ -10,7 +10,7 @@ using std::multiset;
 class CardSet {
 public:
 public:
-    CardSet(int num=2, bool partial=true, const Card* pcd=NULL, bool display=true); 
+    CardSet(int num=2, bool partial=true, const Card* pcd=NULL); 
     ~CardSet();
 
     bool Add_card(const Card &);
