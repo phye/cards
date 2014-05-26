@@ -31,7 +31,7 @@ map<const card_val_t, const char*> Card::create_vs_map(void)
     vs_map[CARD_VAL_EIGHT] = "8";
     vs_map[CARD_VAL_NINE] = "9";
     vs_map[CARD_VAL_TEN] = "10";
-    vs_map[CARD_VAL_JOKER] = "J";
+    vs_map[CARD_VAL_JACK] = "J";
     vs_map[CARD_VAL_QUEEN] = "Q";
     vs_map[CARD_VAL_KING] = "K";
     vs_map[CARD_VAL_ACE] = "A";

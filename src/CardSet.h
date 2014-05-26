@@ -2,15 +2,18 @@
 #define _CARD_SET_H
 
 #include <set>
+#include <vector>
 #include "Card.h"
 #include "CardComp.h"
 
 using std::multiset;
+using std::vector;
 
 class CardSet {
 public:
 public:
     CardSet(int num=2, bool partial=true, const Card* pcd=NULL); 
+    CardSet(int num, const uint8_t* pair_arr, const size_t sz, const Card* pcd=NULL);
     ~CardSet();
 
     bool Add_card(const Card &);
@@ -20,6 +23,8 @@ public:
     void Display() const;
     void Set_prime(const Card &);
 
+    void Get_randomized_vector(vector<Card>& vec);
+    int Get_point();
 private:
     CardSet(const CardSet& ); //Forbidden copy constructure
     CardSet& operator= (const CardSet &); //Forbidden assignment
