@@ -29,33 +29,57 @@ TEST(CardComp, HEARTAsPrime)
 
     CardComp Less(HEART,CARD_VAL_FIVE);
     EXPECT_EQ(false, Less(bjoker, bjoker));
+    EXPECT_EQ(false, Less(ht_5, ht_5));
+    EXPECT_EQ(false, Less(sp_5, sp_5));
+    EXPECT_EQ(false, Less(dm_5, dm_5));
+    EXPECT_EQ(false, Less(cl_5, cl_5));
 
+    /* Compare with joker */
     EXPECT_EQ(true, Less(bjoker, cjoker));
     EXPECT_EQ(false, Less(cjoker, bjoker));
     EXPECT_EQ(true, Less(ht_5, bjoker));
     EXPECT_EQ(false, Less(bjoker,ht_5));
+    EXPECT_EQ(true, Less(sp_8, bjoker));
+    EXPECT_EQ(false, Less(bjoker,sp_8));
+    EXPECT_EQ(true, Less(dm_5, bjoker));
+    EXPECT_EQ(false, Less(bjoker,dm_5));
+    EXPECT_EQ(true, Less(cl_2, bjoker));
+    EXPECT_EQ(false, Less(bjoker,cl_2));
+
+    /* Compare within prime */
     EXPECT_EQ(true, Less(sp_5, ht_5));
     EXPECT_EQ(false, Less(ht_5, sp_5));
     EXPECT_EQ(true, Less(dm_5, sp_5));
     EXPECT_EQ(false, Less(sp_5, dm_5));
     EXPECT_EQ(true, Less(cl_5, dm_5));
     EXPECT_EQ(false, Less(dm_5, cl_5));
+
     EXPECT_EQ(true, Less(ht_a, ht_5));
     EXPECT_EQ(false, Less(ht_5, ht_a));
     EXPECT_EQ(true, Less(ht_3, ht_a));
     EXPECT_EQ(false, Less(ht_a, ht_3));
+
+    EXPECT_EQ(true, Less(ht_a, cl_5));
+    EXPECT_EQ(false, Less(cl_5, ht_a));
+    EXPECT_EQ(true, Less(ht_a, dm_5));
+    EXPECT_EQ(false, Less(dm_5, ht_a));
+//20140527 end here
+    /* Compare prime with non-prime */
     EXPECT_EQ(true, Less(sp_9, ht_3));
     EXPECT_EQ(false, Less(ht_3, sp_9));
-    EXPECT_EQ(true, Less(sp_8, sp_9));
-    EXPECT_EQ(false, Less(sp_9, sp_8));
-    EXPECT_EQ(true, Less(dm_7, ht_3));
-    EXPECT_EQ(false, Less(ht_3, dm_7));
-    EXPECT_EQ(true, Less(dm_7, dm_9));
-    EXPECT_EQ(false, Less(dm_9, dm_7));
     EXPECT_EQ(true, Less(cl_k, ht_3));
     EXPECT_EQ(false, Less(ht_3, cl_k));
+    EXPECT_EQ(true, Less(dm_7, ht_3));
+    EXPECT_EQ(false, Less(ht_3, dm_7));
+
+
+    /* Compare without prime */
+    EXPECT_EQ(true, Less(sp_8, sp_9));
+    EXPECT_EQ(false, Less(sp_9, sp_8));
+    EXPECT_EQ(true, Less(dm_7, dm_9));
+    EXPECT_EQ(false, Less(dm_9, dm_7));
     EXPECT_EQ(true, Less(cl_2, cl_k));
-    EXPECT_EQ(false, Less(cl_k, cl_2));
+    EXPECT_EQ(false, Less(cl_k, cl_2));   
     EXPECT_EQ(true, Less(dm_9, sp_8));
     EXPECT_EQ(false, Less(sp_8, dm_9));
     EXPECT_EQ(true, Less(cl_k, dm_7));
@@ -81,6 +105,11 @@ TEST(CardComp, CLUBAsPrimeWithSetOrder)
     Card cl_k(CLUB, CARD_VAL_KING);
     Card cl_2(CLUB, CARD_VAL_TWO);
 
+    Card ht_5_earlier(HEART, CARD_VAL_FIVE);    
+    Card sp_5_later(SPADE, CARD_VAL_FIVE);
+    Card dm_5_later(DIAMOND, CARD_VAL_FIVE);
+    Card cl_5_later(CLUB, CARD_VAL_FIVE);
+
     bjoker.Set_order(FIRST_PLAYED);
     cl_5.Set_order(FIRST_PLAYED);
     sp_5.Set_order(FIRST_PLAYED);
@@ -89,10 +118,14 @@ TEST(CardComp, CLUBAsPrimeWithSetOrder)
     cl_k.Set_order(SECOND_PLAYED);
     ht_3.Set_order(SECOND_PLAYED);
     dm_5.Set_order(SECOND_PLAYED);
-
+    cl_5_later.Set_order(SECOND_PLAYED);
+    ht_5_earlier.Set_order(SECOND_PLAYED);
+        
     cjoker.Set_order(THIRD_PLAYED);
     sp_9.Set_order(THIRD_PLAYED);
     dm_7.Set_order(THIRD_PLAYED);
+    sp_5_later.Set_order(THIRD_PLAYED);
+    dm_5_later.Set_order(THIRD_PLAYED)
 
     cl_2.Set_order(FOURTH_PLAYED);
     sp_8.Set_order(FOURTH_PLAYED);
@@ -100,6 +133,8 @@ TEST(CardComp, CLUBAsPrimeWithSetOrder)
     ht_5.Set_order(FOURTH_PLAYED);
 
     CardComp Less(CLUB, CARD_VAL_TEN);
+
+    /* Different cards */
     EXPECT_EQ(true, Less(sp_9, dm_9));
     EXPECT_EQ(false, Less(dm_9, sp_9));
     EXPECT_EQ(true, Less(ht_3, dm_9));
@@ -120,6 +155,18 @@ TEST(CardComp, CLUBAsPrimeWithSetOrder)
     EXPECT_EQ(false, Less(bjoker, cl_k));
     EXPECT_EQ(true, Less(bjoker, cjoker));
     EXPECT_EQ(false, Less(cjoker, bjoker));
+
+    /* Same cards with different order */
+    EXPECT_EQ(true, Less(ht_5, ht_5_earlier);
+    EXPECT_EQ(false, Less(ht_5_earlier, ht_5);
+    EXPECT_EQ(true, Less(sp_5_later, sp_5);
+    EXPECT_EQ(false, Less(sp_5, sp_5_later);
+    EXPECT_EQ(true, Less(dm_5_later, dm_5);
+    EXPECT_EQ(false, Less(dm_5, dm_5_later);
+    EXPECT_EQ(true, Less(cl_5_later, cl_5);
+    EXPECT_EQ(false, Less(cl_5, cl_5_later);
+
+    /* Compare about tens */
 } 
 
 TEST(CardComp, NTAsPrime)
