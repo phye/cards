@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <set>
 #include <map>
+#include <cstdlib>
+#include <ctime>
 #include "CardSet.h"
 #include "Card.h"
 #include "CardComp.h"
@@ -109,11 +111,17 @@ void CardSet::Set_prime(const Card& pm)
     card_set =tmp;
 }
 
+static int seed_gen(int i) 
+{ 
+    std::srand(std::time(0));
+    return std::rand()%i; 
+}
+
 void CardSet::Get_randomized_vector(vector<Card>& vec)
 {
     vec.clear();
     vec.assign(card_set->begin(), card_set->end());
-    std::random_shuffle(vec.begin(), vec.end());
+    std::random_shuffle(vec.begin(), vec.end(), seed_gen);
 }
 
 int CardSet::Get_point()
@@ -128,4 +136,18 @@ int CardSet::Get_point()
         ++iter;
     }
     return ret;
+}
+
+int CardSet::Get_char_array(uint8_t* parr, size_t len)
+{
+    multiset<Card, CardComp>::const_iterator iter = card_set->begin();
+    int i = 0;
+    while( iter!= card_set->end() ){
+        if( i>len )
+            break;
+        parr[i] = iter->Get_char();
+        ++i;
+        ++iter;
+    }
+    return i;
 }

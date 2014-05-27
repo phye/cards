@@ -25,6 +25,7 @@ public:
 
     void Get_randomized_vector(vector<Card>& vec);
     int Get_point();
+    int Get_char_array(uint8_t* parr, size_t len);
 private:
     CardSet(const CardSet& ); //Forbidden copy constructure
     CardSet& operator= (const CardSet &); //Forbidden assignment
