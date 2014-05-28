@@ -96,9 +96,11 @@ void CardSet::Display() const
 {
     ofstream log_file;
     log_file.open("display.log", ios::app);
+    log_file << "===== Beginning =====" << endl;
     multiset<Card, CardComp>::const_iterator iter = card_set->begin();
     for (; iter!= card_set->end(); ++iter)
         log_file << *iter << endl; 
+    log_file << "===== End =====" << endl << endl;
     log_file.close();
 }
 

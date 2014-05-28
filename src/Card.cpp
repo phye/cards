@@ -75,7 +75,8 @@ bool Card::Is_valid(const card_suit_t st, const card_val_t val) const
     if (val == CARD_VAL_JOKER)
         return (st == BJOKER || st == CJOKER);
     else if (val>= CARD_VAL_TWO && val < CARD_VAL_JOKER)
-        return ( st>= DIAMOND && st< BJOKER);
+        //In NT case, st can be BJOKER
+        return ( st>= DIAMOND && st<= BJOKER);
     else 
         return false;
 }

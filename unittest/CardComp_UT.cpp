@@ -293,10 +293,10 @@ TEST(CardComp, NTAsPrimeWithSetOrder)
 {
     Card cjoker(CJOKER, CARD_VAL_JOKER);
     Card bjoker(BJOKER, CARD_VAL_JOKER);
-    Card ht_6(HEART, CARD_VAL_FIVE);    
-    Card sp_6(SPADE, CARD_VAL_FIVE);
-    Card dm_6(DIAMOND, CARD_VAL_FIVE);
-    Card cl_6(CLUB, CARD_VAL_FIVE);
+    Card ht_6(HEART, CARD_VAL_SIX);    
+    Card sp_6(SPADE, CARD_VAL_SIX);
+    Card dm_6(DIAMOND, CARD_VAL_SIX);
+    Card cl_6(CLUB, CARD_VAL_SIX);
     Card ht_a(HEART, CARD_VAL_ACE);
     Card ht_3(HEART, CARD_VAL_THREE);
     Card sp_9(SPADE, CARD_VAL_NINE);
