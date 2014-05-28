@@ -378,7 +378,7 @@ TEST(CardComp, NTAsPrimeWithSetOrder)
     EXPECT_EQ(true, Less(dm_7_later, dm_7));
     EXPECT_EQ(false, Less(dm_7, dm_7_later));
     EXPECT_EQ(true, Less(sp_8, sp_8_earlier));
-    EXPECT_EQ(true, Less(sp_8_earlier, sp_8));
+    EXPECT_EQ(false, Less(sp_8_earlier, sp_8));
 
     /* Compare with display order for the same player */
     EXPECT_EQ(true, Less(ht_a, sp_8));
