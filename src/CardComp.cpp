@@ -103,6 +103,7 @@ bool CardComp::Less_nonprime(const Card& lhs, const Card& rhs) const
         //Card is for comparison
         if( lhs.Get_suit() != rhs.Get_suit() ){
             if (lhs.Get_order() == rhs.Get_order())
+                //should not happen in normal case
                 return p_arr[lhs.Get_suit()-1] < p_arr[rhs.Get_suit()-1];
             else
                 return lhs.Get_order() > rhs.Get_order();

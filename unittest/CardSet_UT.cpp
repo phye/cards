@@ -3,6 +3,8 @@
 #include "gtest/gtest.h"
 #include <stdexcept>
 using std::runtime_error;
+using std::cout;
+using std::endl;
 
 TEST(CardSet, DefaultConstructor)
 {
@@ -16,6 +18,16 @@ TEST(CardSet, FullCardSet)
     CardSet cs(2, false, NULL);
     EXPECT_EQ(54*2, cs.Size());
     cs.Display();
+    vector<Card> vec;
+    cs.Get_randomized_vector(vec);
+    vector<Card>::const_iterator iter;
+    for (int i=0; i<4; i++){
+        vector<Card>::const_iterator st = vec.begin() + vec.size()/4*i;
+        vector<Card>::const_iterator ed = st + vec.size()/4;
+        cout<<"Cards of user " << i <<endl;
+        for (iter = st; iter != ed; iter++)
+            cout<<"\t" << *iter << endl;
+    }
 }
 
 TEST(CardSet, Add_card_And_Del_card)
