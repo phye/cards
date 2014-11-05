@@ -2,6 +2,7 @@
 #include <map>
 #include <stdexcept>
 #include "Card.h"
+#include "CardComp.h"
 using std::map;
 using std::ostream;
 using std::endl;
@@ -39,8 +40,17 @@ map<const card_val_t, const char*> Card::create_vs_map(void)
     return vs_map;
 }
 
+inline void Card::Set_prime(const card_pair_t pair) 
+{
+    prime_suit = (card_suit_t) ((pair & 0xF0) >> 4);
+    prime_val = (card_val_t) ((pair & 0x0F));
+}
+
 const map<const card_suit_t, const char*> Card::suit_str_map = Card::create_ss_map();
 const map<const card_val_t, const char*> Card::val_str_map = Card::create_vs_map();
+
+card_suit_t Card::prime_suit = BJOKER;
+card_val_t Card::prime_val = CARD_VAL_JOKER;
 
 Card::Card(card_suit_t suit, card_val_t value)
 {
@@ -51,7 +61,7 @@ Card::Card(card_suit_t suit, card_val_t value)
     card_order = NOT_PLAYED;
 }
 
-Card::Card(const uint8_t pair)
+Card::Card(const card_pair_t pair)
 {
     card_suit_t suit = (card_suit_t) (( pair & 0xF0) >> 4);
     card_val_t value = (card_val_t) (( pair & 0x0F));
@@ -63,9 +73,9 @@ Card::Card(const uint8_t pair)
     card_order = NOT_PLAYED;
 }
 
-const uint8_t Card::Get_char() const
+const card_pair_t Card::Get_char() const
 {
-    uint8_t ret = card_val & 0x0F;
+    card_pair_t ret = card_val & 0x0F;
     ret |= ((card_suit<<4) & 0xF0);
     return ret;
 }
@@ -86,19 +96,13 @@ bool operator== (const Card& lhs, const Card& rhs)
     return ( lhs.card_suit == rhs.card_suit && lhs.card_val == rhs.card_val ) ;
 }
 
-bool lt_by_suit(const Card& lhs, const Card& rhs)
-{
-    if ( lhs.card_suit < rhs.card_suit)
-        return true;
-    if ( (lhs.card_suit == rhs.card_suit)  && (lhs.card_val < rhs.card_val) )
-        return true;
-    return false;
-}
-
 //Suit first, value second
 bool operator< (const Card& lhs, const Card& rhs)
 {
-    return lt_by_suit(lhs,rhs);
+    card_suit_t ps = Card::Get_prime_suit();
+    card_val_t pv = Card::Get_prime_val();
+    CardComp comp(ps, pv);
+    return comp(lhs, rhs);
 }
 
 //User is responsible for check the validability of card

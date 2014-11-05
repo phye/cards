@@ -1,5 +1,5 @@
 CXX=g++
-GTEST_DIR=~/Workspace/cards/thirdparty/gtest
+GTEST_DIR=~/ws/cards/thirdparty/gtest
 
 USER_DIR=../src
 
@@ -16,7 +16,7 @@ clean:
 	rm -f display.log
 
 #Card_UT: Card_UT.cpp libgtest.a Card.o
-Card_UT: Card_UT.cpp Card.o
+Card_UT: Card_UT.cpp Card.o CardComp.o
 	$(CXX) $(CPP_FLAGS) $(CXX_FLAGS) $^ -o $@
 	
 #CardComp_UT: CardComp_UT.cpp libgtest.a Card.o CardComp.o

@@ -390,3 +390,119 @@ TEST(CardComp, NTAsPrimeWithSetOrder)
 
 }
 
+TEST(CardComp, CLUBAsPrimeWithSetOrderUseLT)
+{
+    Card cjoker(CJOKER, CARD_VAL_JOKER);
+    Card bjoker(BJOKER, CARD_VAL_JOKER);
+    Card ht_5(HEART, CARD_VAL_FIVE);    
+    Card sp_5(SPADE, CARD_VAL_FIVE);
+    Card dm_5(DIAMOND, CARD_VAL_FIVE);
+    Card cl_5(CLUB, CARD_VAL_FIVE);
+    Card ht_a(HEART, CARD_VAL_ACE);
+    Card ht_3(HEART, CARD_VAL_THREE);
+    Card sp_9(SPADE, CARD_VAL_NINE);
+    Card sp_8(SPADE, CARD_VAL_EIGHT);
+    Card dm_9(DIAMOND, CARD_VAL_NINE);
+    Card dm_7(DIAMOND, CARD_VAL_SEVEN);
+    Card cl_k(CLUB, CARD_VAL_KING);
+    Card cl_2(CLUB, CARD_VAL_TWO);
+    Card ht_10(HEART, CARD_VAL_TEN);
+    Card sp_10(SPADE, CARD_VAL_TEN);
+    Card dm_10(DIAMOND, CARD_VAL_TEN);
+    Card cl_10(CLUB, CARD_VAL_TEN);
+    Card ht_7(HEART, CARD_VAL_SEVEN);
+
+    Card ht_5_earlier(HEART, CARD_VAL_FIVE);    
+    Card sp_5_later(SPADE, CARD_VAL_FIVE);
+    Card dm_5_later(DIAMOND, CARD_VAL_FIVE);
+    Card cl_5_later(CLUB, CARD_VAL_FIVE);
+
+    bjoker.Set_order(FIRST_PLAYED);
+    cl_5.Set_order(FIRST_PLAYED);
+    sp_5.Set_order(FIRST_PLAYED);
+    dm_9.Set_order(FIRST_PLAYED);
+    sp_10.Set_order(FIRST_PLAYED);
+    ht_7.Set_order(FIRST_PLAYED);
+
+    cl_k.Set_order(SECOND_PLAYED);
+    ht_3.Set_order(SECOND_PLAYED);
+    dm_5.Set_order(SECOND_PLAYED);
+    cl_5_later.Set_order(SECOND_PLAYED);
+    ht_5_earlier.Set_order(SECOND_PLAYED);
+    ht_10.Set_order(SECOND_PLAYED);
+        
+    cjoker.Set_order(THIRD_PLAYED);
+    sp_9.Set_order(THIRD_PLAYED);
+    dm_7.Set_order(THIRD_PLAYED);
+    sp_5_later.Set_order(THIRD_PLAYED);
+    dm_5_later.Set_order(THIRD_PLAYED);
+    dm_10.Set_order(THIRD_PLAYED);
+
+    cl_2.Set_order(FOURTH_PLAYED);
+    sp_8.Set_order(FOURTH_PLAYED);
+    ht_a.Set_order(FOURTH_PLAYED);
+    ht_5.Set_order(FOURTH_PLAYED);
+    cl_10.Set_order(FOURTH_PLAYED);
+
+    //CardComp Less(CLUB, CARD_VAL_TEN);
+    Card::Set_prime_suit(CLUB);
+    Card::Set_prime_val(CARD_VAL_TEN);
+
+    /* Different cards */
+    /* Non-prime, first played should be bigger */
+    EXPECT_EQ(true, sp_9 < dm_9);
+    EXPECT_EQ(false, dm_9 < sp_9);
+    EXPECT_EQ(true, ht_3 < dm_9);
+    EXPECT_EQ(false, dm_9 < ht_3);
+    EXPECT_EQ(true, ht_a < dm_9);
+    EXPECT_EQ(false, dm_9 < ht_a);
+
+    /* Same color compare */
+    EXPECT_EQ(true, sp_5 < sp_9);
+    EXPECT_EQ(false, sp_9 < sp_5);
+    EXPECT_EQ(true, ht_3 < ht_a);
+    EXPECT_EQ(false, ht_a < ht_3);
+    EXPECT_EQ(true, cl_5 < cl_k);
+    EXPECT_EQ(false, cl_k < cl_5);
+
+    EXPECT_EQ(true, cl_k < bjoker);
+    EXPECT_EQ(false, bjoker < cl_k);
+    EXPECT_EQ(true, bjoker < cjoker);
+    EXPECT_EQ(false, cjoker < bjoker);
+
+    /* Same cards with different order */
+    EXPECT_EQ(true, ht_5 < ht_5_earlier);
+    EXPECT_EQ(false, ht_5_earlier < ht_5);
+    EXPECT_EQ(true, sp_5_later < sp_5);
+    EXPECT_EQ(false, sp_5 < sp_5_later);
+    EXPECT_EQ(true, dm_5_later < dm_5);
+    EXPECT_EQ(false, dm_5 < dm_5_later);
+    EXPECT_EQ(true, cl_5_later < cl_5);
+    EXPECT_EQ(false, cl_5 < cl_5_later);
+
+    /* Compare about tens */
+    EXPECT_EQ(true, sp_10 < cl_10);
+    EXPECT_EQ(false, cl_10 < sp_10);
+    EXPECT_EQ(true, dm_10 < ht_10);
+    EXPECT_EQ(false, ht_10 < dm_10);
+    EXPECT_EQ(true, dm_10 < sp_10);
+    EXPECT_EQ(false, sp_10 < dm_10);
+
+    /* Two non-primes, the first is bigger */
+    EXPECT_EQ(true, ht_a < dm_5);
+    EXPECT_EQ(false, dm_5 < ht_a);
+    EXPECT_EQ(true, sp_9 < dm_5);
+    EXPECT_EQ(false, dm_5 < sp_9);
+
+    /* Compare with display order for the same player */
+    EXPECT_EQ(true, cl_5 < bjoker);
+    EXPECT_EQ(false, bjoker < cl_5);
+    EXPECT_EQ(true, dm_9 < sp_5);
+    EXPECT_EQ(false, sp_5 < dm_9);
+    EXPECT_EQ(true, sp_9 < sp_10);
+    EXPECT_EQ(false, sp_10 < sp_9);
+    EXPECT_EQ(true, cl_5 < sp_10);
+    EXPECT_EQ(false, sp_10 < cl_5);
+    EXPECT_EQ(true, sp_5 < ht_7);
+    EXPECT_EQ(false, ht_7 < sp_5);
+} 
