@@ -53,3 +53,24 @@ TEST(Card, Assignment)
     EXPECT_EQ(card_a, card_b);
     cout << card_a << card_b << endl;
 }
+
+TEST(Card, LessThan)
+{
+    Card a(DIAMOND, CARD_VAL_NINE);
+    Card b(DIAMOND, CARD_VAL_TEN);
+    Card c = b;
+    Card d (SPADE, CARD_VAL_FIVE);
+    EXPECT_EQ(true, a < b);
+    EXPECT_EQ(false, c < b);
+    EXPECT_EQ(true, b < d);     //By default SPADE > HEART > CLUB > DIAMOND
+
+    Card::Set_prime_val(CARD_VAL_NINE);
+    Card::Set_prime_suit(DIAMOND);
+    EXPECT_EQ(false, a < b);
+    EXPECT_EQ(false, b < d);     
+
+    card_pair_t char_val = (SPADE <<4) | CARD_VAL_EIGHT;
+    Card::Set_prime(char_val);
+    EXPECT_EQ(true, a < b);
+    EXPECT_EQ(true, b < d);
+}

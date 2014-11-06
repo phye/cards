@@ -12,8 +12,8 @@ using std::vector;
 class CardSet {
 public:
 public:
-    CardSet(int num=2, bool partial=true, const Card* pcd=NULL); 
-    CardSet(int num, const uint8_t* pair_arr, const size_t sz, const Card* pcd=NULL);
+    CardSet(int num=2, bool partial=true);
+    CardSet(int num, const uint8_t* pair_arr, const size_t sz);
     ~CardSet();
 
     bool Add_card(const Card &);
@@ -31,7 +31,7 @@ private:
     CardSet& operator= (const CardSet &); //Forbidden assignment
 
 private:
-    multiset<Card, CardComp>* card_set;
+    multiset<Card>* card_set;
     int num_of_card_set;
     bool is_partial;
 };

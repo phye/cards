@@ -1,10 +1,10 @@
 CXX=g++
-GTEST_DIR=~/ws/cards/thirdparty/gtest
+GTEST_DIR=/home/phye/ws/cards/thirdparty/gtest
 
 USER_DIR=../src
 
-CPP_FLAGS += -I ${USER_DIR} -isystem ${GTEST_DIR}/include -pthread 
-CXX_FLAGS += -L $(GTEST_DIR) -lgtest -g -Wall -pthread 
+CPP_FLAGS += -I ${USER_DIR} -isystem ${GTEST_DIR}/include -g 
+CXX_FLAGS += -L$(GTEST_DIR) -lgtest -Wall -pthread 
 
 TESTS = Card_UT CardSet_UT CardComp_UT
 

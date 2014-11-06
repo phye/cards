@@ -16,13 +16,10 @@ using std::ios;
 using std::endl;
 using std::runtime_error;
 
-CardSet::CardSet(int num, bool partial, const Card* pcd) 
+CardSet::CardSet(int num, bool partial)
     : num_of_card_set(num), is_partial(partial)
 {
-    if (pcd == NULL)
-        card_set = new multiset<Card, CardComp> (CardComp(BJOKER, CARD_VAL_JOKER));
-    else 
-        card_set = new multiset<Card, CardComp> (CardComp(*pcd));
+    card_set = new multiset<Card> ();
 
     if (!partial){
         for (int i=0; i< num_of_card_set; i++){
@@ -47,13 +44,10 @@ CardSet::CardSet(int num, bool partial, const Card* pcd)
     }
 }
 
-CardSet::CardSet(int num, const uint8_t* pair_arr, const size_t sz, const Card* pcd)
+CardSet::CardSet(int num, const uint8_t* pair_arr, const size_t sz)
     : num_of_card_set(num), is_partial(true)
 {
-    if ( !pcd )
-        card_set = new multiset<Card, CardComp> (CardComp(BJOKER, CARD_VAL_JOKER));
-    else 
-        card_set = new multiset<Card, CardComp> (CardComp(*pcd));
+    card_set = new multiset<Card> ();
     for( const uint8_t* ptr = pair_arr; ptr != pair_arr+sz; ptr++){
         //Add exception handling here
         Card cd(*ptr);
@@ -79,7 +73,7 @@ bool CardSet::Add_card(const Card& card)
 bool CardSet::Del_card(const Card& card)
 {
     //We only want to remove one card, so don't use erase(key) directly
-    multiset<Card, CardComp>::iterator iter = card_set->find(card);
+    multiset<Card>::iterator iter = card_set->find(card);
     if(iter != card_set->end()) {
         card_set->erase(iter);
         return true;
@@ -97,7 +91,7 @@ void CardSet::Display() const
     ofstream log_file;
     log_file.open("display.log", ios::app);
     log_file << "===== Beginning =====" << endl;
-    multiset<Card, CardComp>::const_iterator iter = card_set->begin();
+    multiset<Card>::const_iterator iter = card_set->begin();
     for (; iter!= card_set->end(); ++iter)
         log_file << *iter << endl; 
     log_file << "===== End =====" << endl << endl;
@@ -106,8 +100,9 @@ void CardSet::Display() const
 
 void CardSet::Set_prime(const Card& pm)
 {
-    multiset<Card, CardComp>* tmp 
-        = new multiset<Card, CardComp> (CardComp(pm));
+    Card::Set_prime(pm.Get_char());
+    multiset<Card>* tmp 
+        = new multiset<Card> ();
     tmp->insert(card_set->begin(), card_set->end());
     delete card_set;
     card_set =tmp;
@@ -128,7 +123,7 @@ void CardSet::Get_randomized_vector(vector<Card>& vec)
 
 int CardSet::Get_point()
 {
-    multiset<Card, CardComp>::const_iterator iter = card_set->begin();
+    multiset<Card>::const_iterator iter = card_set->begin();
     int ret = 0;
     while( iter!= card_set->end() ){
         if(iter->Get_val() == CARD_VAL_FIVE)
@@ -142,7 +137,7 @@ int CardSet::Get_point()
 
 int CardSet::Get_char_array(uint8_t* parr, size_t len)
 {
-    multiset<Card, CardComp>::const_iterator iter = card_set->begin();
+    multiset<Card>::const_iterator iter = card_set->begin();
     int i = 0;
     while( iter!= card_set->end() ){
         if( i>len )

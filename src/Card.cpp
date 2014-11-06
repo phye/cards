@@ -1,5 +1,7 @@
 #include <iostream>
 #include <map>
+#include <string>
+#include <sstream>
 #include <stdexcept>
 #include "Card.h"
 #include "CardComp.h"
@@ -7,6 +9,8 @@ using std::map;
 using std::ostream;
 using std::endl;
 using std::runtime_error;
+using std::string;
+using std::stringstream;
 
 map<const card_suit_t, const char*> Card::create_ss_map(void)
 {
@@ -40,7 +44,7 @@ map<const card_val_t, const char*> Card::create_vs_map(void)
     return vs_map;
 }
 
-inline void Card::Set_prime(const card_pair_t pair) 
+void Card::Set_prime(const card_pair_t pair) 
 {
     prime_suit = (card_suit_t) ((pair & 0xF0) >> 4);
     prime_val = (card_val_t) ((pair & 0x0F));
@@ -54,8 +58,13 @@ card_val_t Card::prime_val = CARD_VAL_JOKER;
 
 Card::Card(card_suit_t suit, card_val_t value)
 {
-    if (!Is_valid(suit, value))
-        throw runtime_error("Invalid suit or value for a card");
+    if (!Is_valid(suit, value)) {
+        std::string tmp = "Invalid suit or value for a card";
+        stringstream ss;
+        ss << "suit: " << suit << "val: " << value;
+        tmp += ss.str();
+        throw runtime_error(tmp.c_str());
+    }
     card_suit = suit;
     card_val = value;
     card_order = NOT_PLAYED;
@@ -66,8 +75,13 @@ Card::Card(const card_pair_t pair)
     card_suit_t suit = (card_suit_t) (( pair & 0xF0) >> 4);
     card_val_t value = (card_val_t) (( pair & 0x0F));
 
-    if (!Is_valid(suit, value))
-        throw runtime_error("Invalid suit or value for a card");
+    if (!Is_valid(suit, value)) {
+        std::string tmp = "Invalid suit or value for a card";
+        stringstream ss;
+        ss << "suit: " << suit << "val: " << value;
+        tmp += ss.str();
+        throw runtime_error(tmp.c_str());
+    }
     card_suit = suit;
     card_val = value;
     card_order = NOT_PLAYED;

@@ -15,12 +15,30 @@ TEST(CardSet, DefaultConstructor)
 
 TEST(CardSet, CtorFullCardSet)
 {
-    CardSet cs(2, false, NULL);
+    CardSet cs(2, false);
     EXPECT_EQ(54*2, cs.Size());
 }
 
 TEST(CardSet, CtorWithArray)
 {
+    uint8_t* ca = new uint8_t [10];
+    //for (int i = 0; i< 10; i++)
+    //    ca[i] = 0x12;
+    memset(ca, 0, 10);
+    ca[0] = 0x11;
+    ca[1] = 0x12;
+    ca[2] = 0x13;
+    ca[3] = 0x14;
+    ca[4] = 0x12;
+    ca[5] = 0x13;
+    ca[6] = 0x16;
+    ca[7] = 0x17;
+    ca[8] = 0x18;
+    ca[9] = 0x19;
+    CardSet cs(2, ca, 10);
+    cout << cs.Size() << endl;
+    EXPECT_EQ(10, cs.Size());
+    //EXPECT_EQ(15, cs.Get_point());
 }
 
 TEST(CardSet, Add_card_And_Del_card)
@@ -68,7 +86,7 @@ TEST(CardSet, Add_card_And_Del_card)
 
 TEST(CardSet, SetPrime)
 {
-    CardSet cs(2, false, NULL);
+    CardSet cs(2, false);
     EXPECT_EQ(54*2, cs.Size());
     cs.Display();
 
@@ -95,7 +113,7 @@ TEST(CardSet, SetPrime)
 
 TEST(CardSet, Get_randomized_vector)
 {
-    CardSet cs(2, false, NULL);
+    CardSet cs(2, false);
     EXPECT_EQ(54*2, cs.Size());
     vector<Card> vec;
     cs.Get_randomized_vector(vec);
@@ -111,7 +129,7 @@ TEST(CardSet, Get_randomized_vector)
 
 TEST(CardSet, Get_point)
 {
-    CardSet cs_all(2, false, NULL);
+    CardSet cs_all(2, false);
     EXPECT_EQ(54*2, cs_all.Size());
     EXPECT_EQ(200, cs_all.Get_point());
 

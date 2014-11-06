@@ -1,6 +1,8 @@
 #ifndef CARD_COMMON_H
 #define CARD_COMMON_H
 
+#include <stdint.h>
+
 enum card_suit_t {
     CARD_INVALID_SUIT =0,
     DIAMOND,

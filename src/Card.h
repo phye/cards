@@ -19,7 +19,7 @@ public:
 
     static inline void Set_prime_suit(const card_suit_t ps=BJOKER) { prime_suit = ps; }
     static inline void Set_prime_val(const card_val_t pv=CARD_VAL_JOKER) { prime_val = pv; }
-    static inline void Set_prime(const card_pair_t pair);
+    static void Set_prime(const card_pair_t pair);
     static inline card_suit_t Get_prime_suit(void) { return prime_suit; }
     static inline card_val_t Get_prime_val(void) { return prime_val; }
     static inline card_pair_t Get_prime(void) 
@@ -54,4 +54,5 @@ private:
     static card_suit_t prime_suit;
     static card_val_t prime_val;
 };
+
 #endif
