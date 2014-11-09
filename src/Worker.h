@@ -28,6 +28,8 @@ public:
     int Get_time_out() { return mi_time_out; }
     ServerMaster* Get_main_worker() { return mp_main_worker; }
     void Set_time_out(int timeout) { mi_time_out = timeout; }
+    fd_set* Get_rset() { return &m_rset; }
+    fd_set* Get_wset() { return &m_wset; }
 
 public:
     //APIs For MainWorker 
@@ -65,6 +67,7 @@ private:
     inline int Check_and_set_writing();  //atomic check and set writing
     inline int Clear_writing();
 
+    //flag is to indicate finish of Bcast
     void Set_worker_flag(int worker_id);
     //Clear all worker_flag except self
     void Clear_worker_flag();   
@@ -88,7 +91,8 @@ private:
     int Notify_helper(FrameType_t ft);
     
 private:
-    short ms_frame_num;
+    //Stores frame number of Non-ACK/BCAST packets sent to client
+    short ms_frame_num;     
     int mi_worker_id;
     int mi_num_players;
     int mi_sock_fd;

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "Worker.h"
 #include "Frame.h"
@@ -124,11 +125,18 @@ bool Worker::Bcast_to_others(void* buf, int sz)
         Send_buf(i, buf, sz);
     }
 
+    // FIXME:
+    // Worker flag should be set by other workers, and for the worker that
+    // started broadcasting, this worker should simply wait until the flags
+    // are all set.
+    // Other workers will call the sender's Set_worker_flag on receiving
+    // their clients' BCAST_ACKs
     while ( !Is_worker_flag_all_set() ) {
         if (sec == mi_time_out)
             exit(BCAST_BUF_TIMEOUT);
         //TODO: Sleep too long
         //sleep for 20 ms maybe enough
+        usleep(20);
         sec ++;
     }
 
@@ -143,8 +151,8 @@ bool Worker::Bcast_to_others(void* buf, int sz)
  *@Note:
  * ms_frame_num will ++ in generating NonACK&NonBcast headers
  */
-    
-int Worker::Build_header(FrameHead_t ft, uint16_t ack_tag, void* buf, size_t buf_len)
+
+int Worker::Build_header(FrameType_t ft, uint16_t ack_tag, void* buf, size_t buf_len)
 {
     if (ft < 0 || ft > FRAME_TYPE_MAX)
         return -1;
@@ -176,9 +184,8 @@ int Worker::Dispatch_card(const Card& card)
     size_t buf_len = sizeof(FrameHead_t) + 1;
     uint8_t* buf = new uint8_t [buf_len];
 
-    //TODO: Card.Get_char();
     buf[sizeof(FrameHead_t)] = card.Get_char();
-    Build_header(ft, 0, buf, buf_len);
+    Build_header(ft, 0, buf, buf_len);  //NonACK, ack_tag is not used, pass 0
     Send_buf(buf, buf_len);
     delete [] buf;
     return 0;
@@ -190,18 +197,18 @@ int Worker::Send_cards_to_swap(const CardSet& cs)
     size_t buf_len = sizeof(FrameHead_t) + cs.Size();
     uint8_t* buf = new uint8_t [buf_len];
     uint8_t* payload = buf + sizeof(FrameHead_t);
-    
-    //TODO: CardSet.Get_char_array();
+
     cs.Get_char_array(payload, buf_len - sizeof(FrameHead_t));
 
-    Build_header(ft, 0, buf, buf_len);  //My chest hurt at 22:10 04-May-14
+    // !-- My chest hurt at 22:10 04-May-14
+    Build_header(ft, 0, buf, buf_len);
     Send_buf(buf, buf_len);
     delete [] buf;
     return 0;
 }
 
 //This function will only be called when nobody claim for prime
-//during dispathing card period, in which we have to decide the
+//during dispathing card period, in which case we have to decide the
 //prime from bottom cards
 int Worker::Notify_prime(const Card& card)
 {
@@ -231,7 +238,7 @@ int Worker::Notify_banker(int banker_id)
     return 0;
 }
 
-int Worker::Notify_helper(FrameHead_t ft)
+int Worker::Notify_helper(FrameType_t ft)
 {
     size_t buf_len = sizeof(FrameHead_t);
     uint8_t* buf = new uint8_t [buf_len];
@@ -284,7 +291,7 @@ int Worker::Notify_set_result(uint8_t winner_id, uint8_t pts)
     return 0;
 }
 
-int Worker::Ack_helper(FrameHead_t ft, uint16_t ack_tag)
+int Worker::Ack_helper(FrameType_t ft, uint16_t ack_tag)
 {
     size_t buf_len = sizeof(FrameHead_t);
     uint8_t * buf = new uint8_t [buf_len];
@@ -338,7 +345,7 @@ int Worker::Bcast_prime_claim(const Card& prime, int num)
 
 int Worker::Bcast_snd_card(const CardSet& cs)
 {
-    FrameHead_t ft = SND_CARD_DATA_BCAST;
+    FrameType_t ft = SND_CARD_DATA_BCAST;
     size_t buf_len = sizeof(FrameHead_t) + cs.Size();
     uint8_t* buf = new uint8_t [buf_len];
     uint8_t* payload = buf + sizeof(FrameHead_t);
@@ -353,7 +360,7 @@ int Worker::Bcast_snd_card(const CardSet& cs)
 
 int Worker::Bcast_inval_snd_card(const CardSet& cs)
 {
-    FrameHead_t ft = SND_CARD_INVAL_DATA_BCAST;
+    FrameType_t ft = SND_CARD_INVAL_DATA_BCAST;
     size_t buf_len = sizeof(FrameHead_t) + cs.Size();
     uint8_t* buf = new uint8_t [buf_len];
     uint8_t* payload = buf + sizeof(FrameHead_t);
@@ -372,6 +379,8 @@ void* worker_func(void* arg)
     ServerMaster* pm = pw->Get_main_worker();
     int id = pw->Get_worker_id();
     int fd = pw->Get_sock_fd();
+    fd_set* p_rset = pw->Get_rset();
+    fd_set* p_wset = pw->Get_wset();
     struct timeval sel_tmout;
     sel_tmout.tv_sec = 0;
     sel_tmout.tv_nsec = 20000;   //select after every 20 ms
@@ -391,13 +400,17 @@ void* worker_func(void* arg)
         if (FD_ISSET(fd, p_rset)) {
             //Read header first
             int nr = sock_read(fd, pw->mp_rbuf, sizeof(FrameHead_t));
-            if (nr != sizeof(FrameHead_t))
+            if (nr != sizeof(FrameHead_t)) {
+                // TODO:
+                //  Handle more soft
                 exit(READ_INCOMPLETE);
-            uint32_t* magic = (uint32_t*) pw->mp_rbuf + 
+            }
+            uint32_t* magic = (uint32_t*) pw->mp_rbuf +
                 offsetof(FrameHead_t, frm_magic_num);
-            if (*magic != 0xCAFEDADD)
+            //FIXME: Should I add ntohl here?
+            if (ntohl(*magic) != 0xCAFEDADD)
                 exit(INVALID_PACKAGE);
-            
+
             FrameType_t ft = pw->mp_rbuf[offsetof(FrameHead_t, frm_type)];
             uint8_t data_len = pw->mp_rbuf[offsetof(FrameHead_t, frm_len)];
             uint8_t* payload = pw->mp_rbuf[sizeof(FrameHead_t)];
@@ -423,17 +436,23 @@ void* worker_func(void* arg)
                     {
                         if (pm->GetCurrentState() != DISPATCHING_CARDS &&
                                 pm->GetCurrentState() != WAITING_PRIME)
-                            //TODO: Log sth
+                            //TODO: Err sth
                             break;
-                        if (data_len > 2) 
+                        if (data_len > 2) {
+                            //TODO:
+                            // Err sth
                             break;
+                        }
                         else if (data_len == 2) {
-                            if ( payload[0] != payload[1] )
+                            if ( payload[0] != payload[1] ) {
+                                // TODO:
+                                // Err sth
                                 break;
+                            }
                         }
                         //TODO, add ctor of Card, Card(char);
-                        Card prime(payload[0]); 
-                        int ret = pm->Set_prime_card(prime, data_len);
+                        Card prime(payload[0]);
+                        int ret = pm->SetPrimeCard(prime, data_len);
                         if (ret == 0){
                             pw->Ack_prime_claim(ack_tag);
                             pw->Bcast_prime_claim(prime, data_len);
@@ -450,7 +469,7 @@ void* worker_func(void* arg)
                             break;
                         //TODO: need to add validity check for BCAST_ACK
                         int snd_id = pw->rbuf[offsetof(FrameHead_t, frm_src)];
-                        pm->Get_worker(snd_id)->Set_worker_flag(id);
+                        pm->GetWorker(snd_id)->Set_worker_flag(id);
                         break;
                     }
                 case PRIME_NOTIF_ACK:
@@ -505,11 +524,10 @@ void* worker_func(void* arg)
                         if (data_len == BASE_CARD_NUM) {
                             CardSet base_cards(payload, data_len);
                             pw->Ack_swap_card_data(ack_tag);
-                            pm->Set_base_cards(base_cards);
+                            pm->SetBaseCards(base_cards);
                             pw->Clear_ready_for_swap_card();
                             pm->SetNextReady(id);
-                        }
-                        else {
+                        } else {
                             //TODO, add some error handling and log sth
                         }
                         break;
@@ -537,7 +555,7 @@ void* worker_func(void* arg)
                         CardSet snd_cards(payload, data_len);
                         // Directly call Mainwoker's function
                         if (pm->Is_valid_snd(id, snd_cards)){
-                            pm->Update_card_set(id, snd_cards);
+                            pm->UpdateCardsInHand(id, snd_cards);
                             pw->Ack_snd_card_data(ack_tag);
                             pw->Bcast_snd_card(snd_cards);
                             pw->Clear_ready_for_card();

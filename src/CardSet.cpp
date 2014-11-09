@@ -100,7 +100,8 @@ void CardSet::Display() const
 
 void CardSet::Set_prime(const Card& pm)
 {
-    Card::Set_prime(pm.Get_char());
+    if (pm.Get_prime() != pm.Get_char())
+        Card::Set_prime(pm.Get_char());
     multiset<Card>* tmp 
         = new multiset<Card> ();
     tmp->insert(card_set->begin(), card_set->end());

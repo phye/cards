@@ -2,6 +2,7 @@
 #define _SERVER_MASTER_H_
 
 #include <vector>
+#include <stdint>
 using std::vector;
 
 
@@ -72,6 +73,12 @@ class ServerMaster{
         void SendCard(int workerId, CardSet cards);
         
         bool IsBanker(PLAYERNAME player);
+
+    public:  //Required by phye
+        // Returns 0 on success, others on failure
+        int SetPrimeCard(const Card& prime, uint8_t data_len);
+        int SetBaseCards(const CardSet& base);
+        int UpdateCardsInHand(const int id, const CardSet& cardset);
 
     private:
         void WaitWorkerSetReady(int workerID);
