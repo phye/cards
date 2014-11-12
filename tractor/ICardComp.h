@@ -1,6 +1,6 @@
 #ifndef _ICARDCOMP_H
 #define _ICARDCOMP_H
-#include "Card.h"
+#include <tractor/Card.h>
 
 class ICardComp {
 public:

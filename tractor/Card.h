@@ -4,8 +4,8 @@
 #include <iostream>
 #include <map>
 #include <stdint.h>
-#include "error.h"
-#include "common.h"
+#include <tractor/error.h>
+#include <tractor/common.h>
 
 using std::map;
 using std::ostream;

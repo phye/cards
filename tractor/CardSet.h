@@ -3,8 +3,8 @@
 
 #include <set>
 #include <vector>
-#include "Card.h"
-#include "CardComp.h"
+#include <tractor/Card.h>
+#include <tractor/CardComp.h>
 
 using std::multiset;
 using std::vector;

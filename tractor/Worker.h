@@ -5,11 +5,11 @@
 #include <pthread.h>
 #include <stdint.h>
 
-#include "ServerMaster.h"
-#include "error.h"
-#include "Card.h"
-#include "CardSet.h"
-#include "Frame.h"
+#include <tractor/ServerMaster.h>
+#include <tractor/error.h>
+#include <tractor/Card.h>
+#include <tractor/CardSet.h>
+#include <tractor/Frame.h>
 
 #define BUF_LENGTH 50
 #define BASE_CARD_NUM 8

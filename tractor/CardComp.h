@@ -1,7 +1,7 @@
 #ifndef _CARDCOMP_H
 #define _CARDCOMP_H
 
-#include "Card.h"
+#include <tractor/Card.h>
 
 class CardComp {
 public:
